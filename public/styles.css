@@ -271,6 +271,21 @@ input:focus, select:focus, textarea:focus {
     max-width: 200px;
     height: auto;
 }
+.fallback-url {
+    background-color: #f3f4f6;
+    padding: 15px;
+    border-radius: 5px;
+    border-left: 4px solid #f59e0b;
+}
+
+.fallback-url strong {
+    word-break: break-all;
+    background-color: #fff;
+    padding: 5px;
+    border-radius: 3px;
+    display: inline-block;
+    margin: 5px 0;
+}
 
 @media (max-width: 768px) {
     .container {

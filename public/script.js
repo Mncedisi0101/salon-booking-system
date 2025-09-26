@@ -47,7 +47,7 @@ function initBusinessRegistration() {
     
     // Form submission
     
-    businessForm.addEventListener('submit', async function(e) {
+        businessForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         
         // Show loading state
@@ -56,38 +56,36 @@ function initBusinessRegistration() {
         submitBtn.textContent = 'Registering...';
         submitBtn.disabled = true;
         
-        // Collect services
-        const services = [];
-        const serviceInputs = document.querySelectorAll('.service-input');
-        
-        serviceInputs.forEach(input => {
-            const name = input.querySelector('.service-name').value;
-            const price = parseFloat(input.querySelector('.service-price').value);
-            const duration = parseInt(input.querySelector('.service-duration').value);
-            
-            if (name && !isNaN(price) && !isNaN(duration)) {
-                services.push({ name, price, duration });
-            }
-        });
-        
-        if (services.length === 0) {
-            alert('Please add at least one service');
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
-            return;
-        }
-        
-        // Prepare business data
-        const businessData = {
-            name: document.getElementById('businessName').value,
-            email: document.getElementById('email').value,
-            phone: document.getElementById('phone').value,
-            address: document.getElementById('address').value,
-            services: services
-        };
-        
         try {
-            console.log('Sending request to /api/business');
+            // Collect services
+            const services = [];
+            const serviceInputs = document.querySelectorAll('.service-input');
+            
+            serviceInputs.forEach(input => {
+                const name = input.querySelector('.service-name').value;
+                const price = parseFloat(input.querySelector('.service-price').value);
+                const duration = parseInt(input.querySelector('.service-duration').value);
+                
+                if (name && !isNaN(price) && !isNaN(duration)) {
+                    services.push({ name, price, duration });
+                }
+            });
+            
+            if (services.length === 0) {
+                alert('Please add at least one service');
+                return;
+            }
+            
+            // Prepare business data
+            const businessData = {
+                name: document.getElementById('businessName').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                address: document.getElementById('address').value,
+                services: services
+            };
+            
+            console.log('Sending business registration request...');
             const response = await fetch('/api/business', {
                 method: 'POST',
                 headers: {
@@ -103,7 +101,7 @@ function initBusinessRegistration() {
             if (!contentType || !contentType.includes('application/json')) {
                 const text = await response.text();
                 console.error('Non-JSON response:', text.substring(0, 200));
-                throw new Error(`Server returned ${response.status}: ${text.substring(0, 100)}`);
+                throw new Error(`Server returned ${response.status}`);
             }
             
             const result = await response.json();
@@ -112,26 +110,21 @@ function initBusinessRegistration() {
                 throw new Error(result.error || `HTTP error! status: ${response.status}`);
             }
             
-            // Show success message and QR code
-            document.getElementById('businessForm').closest('.form-container').classList.add('hidden');
-            document.getElementById('successMessage').classList.remove('hidden');
+            console.log('Business registered successfully:', result.business.id);
             
-            // Generate QR code
-            const qrResponse = await fetch('/api/qrcode', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ businessId: result.business.id })
-            });
+            // Show success message
+            const formContainer = document.getElementById('businessForm').closest('.form-container');
+            const successMessage = document.getElementById('successMessage');
             
-            if (!qrResponse.ok) {
-                throw new Error('Failed to generate QR code');
+            if (formContainer && successMessage) {
+                formContainer.classList.add('hidden');
+                successMessage.classList.remove('hidden');
+            } else {
+                throw new Error('Could not find success message container');
             }
             
-            const qrResult = await qrResponse.json();
-            document.getElementById('qrCodeContainer').innerHTML = `<img src="${qrResult.qrCode}" alt="QR Code">`;
-            document.getElementById('businessId').textContent = result.business.id;
+            // Generate QR code
+            await generateQRCode(result.business.id);
             
         } catch (error) {
             console.error('Registration error:', error);
@@ -141,8 +134,73 @@ function initBusinessRegistration() {
             submitBtn.disabled = false;
         }
     });
-}
 
+    // Separate function for QR code generation
+    async function generateQRCode(businessId) {
+        try {
+            console.log('Generating QR code for business:', businessId);
+            const qrResponse = await fetch('/api/qrcode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ businessId })
+            });
+            
+            console.log('QR code response status:', qrResponse.status);
+            
+            const contentType = qrResponse.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await qrResponse.text();
+                throw new Error(`QR code server returned ${qrResponse.status}`);
+            }
+            
+            const qrResult = await qrResponse.json();
+            
+            if (!qrResponse.ok) {
+                throw new Error(qrResult.error || 'Failed to generate QR code');
+            }
+            
+            // Update QR code container
+            const qrCodeContainer = document.getElementById('qrCodeContainer');
+            if (qrCodeContainer) {
+                if (qrResult.qrCode) {
+                    qrCodeContainer.innerHTML = `<img src="${qrResult.qrCode}" alt="QR Code">`;
+                } else {
+                    qrCodeContainer.innerHTML = '<p>QR code URL: ' + qrResult.url + '</p>';
+                }
+            }
+            
+            // Update business ID display
+            const businessIdElement = document.getElementById('businessId');
+            if (businessIdElement) {
+                businessIdElement.textContent = businessId;
+                
+                // Update dashboard link
+                const dashboardLink = document.querySelector('#successMessage a');
+                if (dashboardLink) {
+                    dashboardLink.href = `business.html?id=${businessId}`;
+                }
+            }
+            
+        } catch (error) {
+            console.error('QR code generation error:', error);
+            
+            // Show fallback URL
+            const qrCodeContainer = document.getElementById('qrCodeContainer');
+            if (qrCodeContainer) {
+                const fallbackUrl = `https://${window.location.host}/customer.html?business=${businessId}`;
+                qrCodeContainer.innerHTML = `
+                    <div class="fallback-url">
+                        <p>QR code generation failed. Use this URL for bookings:</p>
+                        <p><strong>${fallbackUrl}</strong></p>
+                        <p>You can generate a QR code later from your dashboard.</p>
+                    </div>
+                `;
+            }
+        }
+    }
+}
 // Customer Booking Functions
 function initCustomerBooking() {
     const userForm = document.getElementById('userForm');
