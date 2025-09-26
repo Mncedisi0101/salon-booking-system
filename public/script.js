@@ -46,8 +46,15 @@ function initBusinessRegistration() {
     });
     
     // Form submission
+    
     businessForm.addEventListener('submit', async function(e) {
         e.preventDefault();
+        
+        // Show loading state
+        const submitBtn = businessForm.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Registering...';
+        submitBtn.disabled = true;
         
         // Collect services
         const services = [];
@@ -65,6 +72,8 @@ function initBusinessRegistration() {
         
         if (services.length === 0) {
             alert('Please add at least one service');
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
             return;
         }
         
@@ -78,6 +87,7 @@ function initBusinessRegistration() {
         };
         
         try {
+            console.log('Sending request to /api/business');
             const response = await fetch('/api/business', {
                 method: 'POST',
                 headers: {
@@ -86,33 +96,49 @@ function initBusinessRegistration() {
                 body: JSON.stringify(businessData)
             });
             
+            console.log('Response status:', response.status);
+            
+            // Check if response is JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                console.error('Non-JSON response:', text.substring(0, 200));
+                throw new Error(`Server returned ${response.status}: ${text.substring(0, 100)}`);
+            }
+            
             const result = await response.json();
             
-            if (response.ok) {
-                // Show success message and QR code
-                document.getElementById('businessForm').closest('.form-container').classList.add('hidden');
-                document.getElementById('successMessage').classList.remove('hidden');
-                
-                // Generate QR code
-                const qrResponse = await fetch('/api/qrcode', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ businessId: result.business.id })
-                });
-                
-                const qrResult = await qrResponse.json();
-                
-                if (qrResponse.ok) {
-                    document.getElementById('qrCodeContainer').innerHTML = `<img src="${qrResult.qrCode}" alt="QR Code">`;
-                    document.getElementById('businessId').textContent = result.business.id;
-                }
-            } else {
-                alert('Error: ' + result.error);
+            if (!response.ok) {
+                throw new Error(result.error || `HTTP error! status: ${response.status}`);
             }
+            
+            // Show success message and QR code
+            document.getElementById('businessForm').closest('.form-container').classList.add('hidden');
+            document.getElementById('successMessage').classList.remove('hidden');
+            
+            // Generate QR code
+            const qrResponse = await fetch('/api/qrcode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ businessId: result.business.id })
+            });
+            
+            if (!qrResponse.ok) {
+                throw new Error('Failed to generate QR code');
+            }
+            
+            const qrResult = await qrResponse.json();
+            document.getElementById('qrCodeContainer').innerHTML = `<img src="${qrResult.qrCode}" alt="QR Code">`;
+            document.getElementById('businessId').textContent = result.business.id;
+            
         } catch (error) {
+            console.error('Registration error:', error);
             alert('Error registering business: ' + error.message);
+        } finally {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
         }
     });
 }

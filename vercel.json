@@ -13,7 +13,15 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "dest": "/api/$1.js"
+    },
+    {
+      "src": "/",
+      "dest": "/public/index.html"
+    },
+    {
+      "src": "/(.*\\.html)",
+      "dest": "/public/$1"
     },
     {
       "src": "/(.*)",
