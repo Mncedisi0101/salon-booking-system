@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 id="dashboardTitle">Business Dashboard</h1>
+            <div class="header-actions">
+                <button id="refreshBtn" class="btn-secondary">Refresh</button>
+                <button id="qrBtn" class="btn-primary">Show QR Code</button>
+            </div>
+        </header>
+        
+        <main>
+            <div class="stats-container">
+                <div class="stat-card">
+                    <h3>Today's Appointments</h3>
+                    <p id="todayCount">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Pending Approvals</h3>
+                    <p id="pendingCount">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Appointments</h3>
+                    <p id="totalCount">0</p>
+                </div>
+            </div>
+            
+            <div class="appointments-container">
+                <h2>Upcoming Appointments</h2>
+                <div id="appointmentsList" class="appointments-list">
+                    <!-- Appointments will be loaded here -->
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- QR Code Modal -->
+    <div id="qrModal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Your Booking QR Code</h2>
+            <div id="modalQrCode"></div>
+            <p>Customers can scan this code to book appointments</p>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

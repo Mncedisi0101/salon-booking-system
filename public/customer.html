@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book an Appointment</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 id="businessTitle">Salon Booking</h1>
+            <p>Book your appointment easily</p>
+        </header>
+        
+        <main>
+            <div id="userInfoForm" class="form-container">
+                <h2>Your Information</h2>
+                <form id="userForm">
+                    <div class="form-group">
+                        <label for="userName">Full Name</label>
+                        <input type="text" id="userName" name="userName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="userEmail">Email</label>
+                        <input type="email" id="userEmail" name="userEmail" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="userPhone">Phone</label>
+                        <input type="tel" id="userPhone" name="userPhone" required>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary">Continue to Booking</button>
+                </form>
+            </div>
+            
+            <div id="bookingForm" class="form-container hidden">
+                <h2>Book Your Appointment</h2>
+                <form id="appointmentForm">
+                    <div class="form-group">
+                        <label for="service">Select Service</label>
+                        <select id="service" name="service" required>
+                            <option value="">Choose a service</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="appointmentDate">Date and Time</label>
+                        <input type="datetime-local" id="appointmentDate" name="appointmentDate" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="notes">Additional Notes (Optional)</label>
+                        <textarea id="notes" name="notes" rows="3"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary">Book Appointment</button>
+                </form>
+            </div>
+            
+            <div id="confirmationMessage" class="hidden">
+                <h2>Appointment Booked Successfully!</h2>
+                <p>Your appointment has been scheduled. You will receive a confirmation email shortly.</p>
+                <button id="bookAnother" class="btn-primary">Book Another Appointment</button>
+            </div>
+        </main>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

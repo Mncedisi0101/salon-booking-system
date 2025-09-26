@@ -1,0 +1,19 @@
+{
+  "name": "salon-booking-system",
+  "version": "1.0.0",
+  "description": "A salon booking system with QR code functionality",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.0",
+    "qrcode": "^1.5.3",
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "vercel": "^28.16.0"
+  }
+}
