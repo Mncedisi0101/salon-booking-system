@@ -8,12 +8,24 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.38.0",
-    "qrcode": "^1.5.3",
-    "express": "^4.18.2",
-    "cors": "^2.8.5"
+    "@supabase/supabase-js": "^2.58.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "vercel": "^28.16.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mncedisi0101/salon-booking-system.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Mncedisi0101/salon-booking-system/issues"
+  },
+  "homepage": "https://github.com/Mncedisi0101/salon-booking-system#readme"
 }
