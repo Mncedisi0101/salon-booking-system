@@ -1,25 +1,9 @@
 // Global variables
 let currentBusinessId = null;
 let currentUserId = null;
+let currentUserType = null;
+let currentBusinessData = null;
 let businessServices = [];
-
-// DOM Content Loaded
-document.addEventListener('DOMContentLoaded', function() {
-    // Business Registration Page
-    if (document.getElementById('businessForm')) {
-        initBusinessRegistration();
-    }
-    
-    // Customer Booking Page
-    if (document.getElementById('userForm')) {
-        initCustomerBooking();
-    }
-    
-    // Business Dashboard
-    if (document.getElementById('dashboardTitle')) {
-        initBusinessDashboard();
-    }
-});
 
 // Business Registration Functions
 function initBusinessRegistration() {
@@ -28,179 +12,565 @@ function initBusinessRegistration() {
     const servicesContainer = document.querySelector('.services-container');
     
     // Add service field
-    addServiceBtn.addEventListener('click', function() {
-        const serviceInput = document.createElement('div');
-        serviceInput.className = 'service-input';
-        serviceInput.innerHTML = `
-            <input type="text" placeholder="Service name" class="service-name" required>
-            <input type="number" placeholder="Price ($)" class="service-price" min="0" step="0.01" required>
-            <input type="number" placeholder="Duration (minutes)" class="service-duration" min="1" required>
-            <button type="button" class="remove-service">Remove</button>
-        `;
-        servicesContainer.appendChild(serviceInput);
-        
-        // Add remove functionality
-        serviceInput.querySelector('.remove-service').addEventListener('click', function() {
-            servicesContainer.removeChild(serviceInput);
+    if (addServiceBtn && servicesContainer) {
+        addServiceBtn.addEventListener('click', function() {
+            const serviceInput = document.createElement('div');
+            serviceInput.className = 'service-input';
+            serviceInput.innerHTML = `
+                <input type="text" placeholder="Service name" class="service-name" required>
+                <input type="number" placeholder="Price (R)" class="service-price" min="0" step="0.01" required>
+                <input type="number" placeholder="Duration (minutes)" class="service-duration" min="1" required>
+                <button type="button" class="remove-service">Remove</button>
+            `;
+            servicesContainer.appendChild(serviceInput);
+            
+            // Add remove functionality
+            serviceInput.querySelector('.remove-service').addEventListener('click', function() {
+                servicesContainer.removeChild(serviceInput);
+            });
         });
-    });
-    
-    // Form submission
-    
-        businessForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        // Show loading state
-        const submitBtn = businessForm.querySelector('button[type="submit"]');
-        const originalText = submitBtn.textContent;
-        submitBtn.textContent = 'Registering...';
-        submitBtn.disabled = true;
-        
-        try {
-            // Collect services
-            const services = [];
-            const serviceInputs = document.querySelectorAll('.service-input');
-            
-            serviceInputs.forEach(input => {
-                const name = input.querySelector('.service-name').value;
-                const price = parseFloat(input.querySelector('.service-price').value);
-                const duration = parseInt(input.querySelector('.service-duration').value);
-                
-                if (name && !isNaN(price) && !isNaN(duration)) {
-                    services.push({ name, price, duration });
-                }
-            });
-            
-            if (services.length === 0) {
-                alert('Please add at least one service');
-                return;
-            }
-            
-            // Prepare business data
-            const businessData = {
-                name: document.getElementById('businessName').value,
-                email: document.getElementById('email').value,
-                phone: document.getElementById('phone').value,
-                address: document.getElementById('address').value,
-                services: services
-            };
-            
-            console.log('Sending business registration request...');
-            const response = await fetch('/api/business', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(businessData)
-            });
-            
-            console.log('Response status:', response.status);
-            
-            // Check if response is JSON
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                const text = await response.text();
-                console.error('Non-JSON response:', text.substring(0, 200));
-                throw new Error(`Server returned ${response.status}`);
-            }
-            
-            const result = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(result.error || `HTTP error! status: ${response.status}`);
-            }
-            
-            console.log('Business registered successfully:', result.business.id);
-            
-            // Show success message
-            const formContainer = document.getElementById('businessForm').closest('.form-container');
-            const successMessage = document.getElementById('successMessage');
-            
-            if (formContainer && successMessage) {
-                formContainer.classList.add('hidden');
-                successMessage.classList.remove('hidden');
-            } else {
-                throw new Error('Could not find success message container');
-            }
-            
-            // Generate QR code
-            await generateQRCode(result.business.id);
-            
-        } catch (error) {
-            console.error('Registration error:', error);
-            alert('Error registering business: ' + error.message);
-        } finally {
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
-        }
-    });
+    }
+}
 
-    //  function for QR code generation
-    async function generateQRCode(businessId) {
-        try {
-            console.log('Generating QR code for business:', businessId);
-            const qrResponse = await fetch('/api/qrcode', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ businessId })
-            });
+// Authentication functions
+function initBusinessAuthentication() {
+    const businessForm = document.getElementById('businessForm');
+    const loginForm = document.getElementById('loginForm');
+    const showBusinessLogin = document.getElementById('showBusinessLogin');
+    const showBusinessRegister = document.getElementById('showBusinessRegister');
+    
+    // Show login form
+    if (showBusinessLogin) {
+        showBusinessLogin.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('businessForm').closest('.form-container').classList.add('hidden');
+            document.getElementById('businessLoginForm').classList.remove('hidden');
+        });
+    }
+    
+    // Show registration form
+    if (showBusinessRegister) {
+        showBusinessRegister.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('businessLoginForm').classList.add('hidden');
+            document.getElementById('businessForm').closest('.form-container').classList.remove('hidden');
+        });
+    }
+    
+    // Business registration
+    if (businessForm) {
+        businessForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await handleBusinessRegistration();
+        });
+    }
+    
+    // Business login
+    if (loginForm) {
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await handleBusinessLogin();
+        });
+    }
+}
+
+async function handleBusinessRegistration() {
+    const businessForm = document.getElementById('businessForm');
+    const submitBtn = businessForm.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Registering...';
+    submitBtn.disabled = true;
+    
+    try {
+        // Collect services
+        const services = [];
+        const serviceInputs = document.querySelectorAll('.service-input');
+        
+        serviceInputs.forEach(input => {
+            const name = input.querySelector('.service-name').value;
+            const price = parseFloat(input.querySelector('.service-price').value);
+            const duration = parseInt(input.querySelector('.service-duration').value);
             
-            console.log('QR code response status:', qrResponse.status);
-            
-            const contentType = qrResponse.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                const text = await qrResponse.text();
-                throw new Error(`QR code server returned ${qrResponse.status}`);
+            if (name && !isNaN(price) && !isNaN(duration)) {
+                services.push({ name, price, duration });
+            }
+        });
+        
+        if (services.length === 0) {
+            alert('Please add at least one service');
+            return;
+        }
+        
+        // Check password
+        const password = document.getElementById('password').value;
+        if (password.length < 6) {
+            alert('Password must be at least 6 characters long');
+            return;
+        }
+        
+        // Prepare business data
+        const businessData = {
+            type: 'business_register',
+            name: document.getElementById('businessName').value,
+            email: document.getElementById('email').value,
+            password: password,
+            phone: document.getElementById('phone').value,
+            address: document.getElementById('address').value,
+            services: services
+        };
+        
+        console.log('Sending registration request to /api/auth...');
+        
+        const response = await fetch('/api/auth', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(businessData)
+        });
+        
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
+        
+        // Check if the response is successful
+        if (!response.ok) {
+            // If it's a 405 error, the API endpoint doesn't exist or is misconfigured
+            if (response.status === 405) {
+                throw new Error('API endpoint not configured properly. Please check server setup.');
             }
             
-            const qrResult = await qrResponse.json();
-            
-            if (!qrResponse.ok) {
-                throw new Error(qrResult.error || 'Failed to generate QR code');
-            }
-            
-            //  QR code container
-            const qrCodeContainer = document.getElementById('qrCodeContainer');
-            if (qrCodeContainer) {
-                if (qrResult.qrCode) {
-                    qrCodeContainer.innerHTML = `<img src="${qrResult.qrCode}" alt="QR Code">`;
-                } else {
-                    qrCodeContainer.innerHTML = '<p>QR code URL: ' + qrResult.url + '</p>';
+            // Try to get error message from response
+            let errorMessage = `HTTP error! status: ${response.status}`;
+            try {
+                const errorText = await response.text();
+                if (errorText) {
+                    errorMessage = errorText;
                 }
+            } catch (e) {
+                // Ignore if we can't read the error text
             }
-            
-            //  business ID display
-            const businessIdElement = document.getElementById('businessId');
-            if (businessIdElement) {
-                businessIdElement.textContent = businessId;
-                
-                //  dashboard link
-                const dashboardLink = document.querySelector('#successMessage a');
-                if (dashboardLink) {
-                    dashboardLink.href = `business.html?id=${businessId}`;
-                }
+            throw new Error(errorMessage);
+        }
+        
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Non-JSON response:', text.substring(0, 200));
+            throw new Error(`Server returned non-JSON response: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('Registration successful:', result);
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Registration failed');
+        }
+        
+        // Store business info and redirect to dashboard
+        localStorage.setItem('businessUser', JSON.stringify(result.business));
+        localStorage.setItem('userType', 'business');
+        
+        // Show success message
+        document.getElementById('businessForm').closest('.form-container').classList.add('hidden');
+        document.getElementById('successMessage').classList.remove('hidden');
+        
+        // Generate QR code
+        await generateQRCode(result.business.id);
+        
+        // Update dashboard link
+        const dashboardLink = document.getElementById('dashboardLink');
+        if (dashboardLink) {
+            dashboardLink.href = `business.html?id=${result.business.id}`;
+            dashboardLink.onclick = () => {
+                window.location.href = `business.html?id=${result.business.id}`;
+            };
+        }
+        
+    } catch (error) {
+        console.error('Registration error:', error);
+        alert('Error registering business: ' + error.message);
+    } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+// Function for QR code generation
+async function generateQRCode(businessId) {
+    try {
+        console.log('Generating QR code for business:', businessId);
+        const qrResponse = await fetch('/api/qrcode', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ businessId })
+        });
+        
+        console.log('QR code response status:', qrResponse.status);
+        
+        if (!qrResponse.ok) {
+            throw new Error(`QR code generation failed: ${qrResponse.status}`);
+        }
+        
+        const contentType = qrResponse.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await qrResponse.text();
+            throw new Error(`QR code server returned non-JSON: ${qrResponse.status}`);
+        }
+        
+        const qrResult = await qrResponse.json();
+        
+        if (!qrResponse.ok) {
+            throw new Error(qrResult.error || 'Failed to generate QR code');
+        }
+        
+        // Update QR code container
+        const qrCodeContainer = document.getElementById('qrCodeContainer');
+        if (qrCodeContainer) {
+            if (qrResult.qrCode) {
+                qrCodeContainer.innerHTML = `<img src="${qrResult.qrCode}" alt="QR Code">`;
+            } else {
+                qrCodeContainer.innerHTML = '<p>QR code URL: ' + qrResult.url + '</p>';
             }
+        }
+        
+        // Update business ID display
+        const businessIdElement = document.getElementById('businessId');
+        if (businessIdElement) {
+            businessIdElement.textContent = businessId;
             
-        } catch (error) {
-            console.error('QR code generation error:', error);
-            
-            // Show fallback URL
-            const qrCodeContainer = document.getElementById('qrCodeContainer');
-            if (qrCodeContainer) {
-                const fallbackUrl = `https://${window.location.host}/customer.html?business=${businessId}`;
-                qrCodeContainer.innerHTML = `
-                    <div class="fallback-url">
-                        <p>QR code generation failed. Use this URL for bookings:</p>
-                        <p><strong>${fallbackUrl}</strong></p>
-                        <p>You can generate a QR code later from your dashboard.</p>
-                    </div>
-                `;
+            // Update dashboard link
+            const dashboardLink = document.querySelector('#successMessage a');
+            if (dashboardLink) {
+                dashboardLink.href = `business.html?id=${businessId}`;
             }
+        }
+        
+    } catch (error) {
+        console.error('QR code generation error:', error);
+        
+        // Show fallback URL
+        const qrCodeContainer = document.getElementById('qrCodeContainer');
+        if (qrCodeContainer) {
+            const fallbackUrl = `${window.location.protocol}//${window.location.host}/customer.html?business=${businessId}`;
+            qrCodeContainer.innerHTML = `
+                <div class="fallback-url">
+                    <p>QR code generation failed. Use this URL for bookings:</p>
+                    <p><strong>${fallbackUrl}</strong></p>
+                    <p>You can generate a QR code later from your dashboard.</p>
+                </div>
+            `;
         }
     }
 }
+
+async function handleBusinessLogin() {
+    const loginForm = document.getElementById('loginForm');
+    const submitBtn = loginForm.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Logging in...';
+    submitBtn.disabled = true;
+    
+    try {
+        const loginData = {
+            type: 'business_login',
+            email: document.getElementById('loginEmail').value,
+            password: document.getElementById('loginPassword').value
+        };
+        
+        const response = await fetch('/api/auth', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(loginData)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Login failed: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Login failed');
+        }
+        
+        // Store business info and redirect to dashboard
+        localStorage.setItem('businessUser', JSON.stringify(result.user));
+        localStorage.setItem('userType', 'business');
+        
+        // Redirect to dashboard
+        window.location.href = `business.html?id=${result.user.id}`;
+        
+    } catch (error) {
+        console.error('Login error:', error);
+        alert('Error logging in: ' + error.message);
+    } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+function initCustomerAuthentication() {
+    const authTabs = document.querySelectorAll('.auth-tab');
+    const customerLoginForm = document.getElementById('customerLoginForm');
+    const customerRegisterForm = document.getElementById('customerRegisterForm');
+    
+    // Tab switching
+    authTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            const targetTab = this.getAttribute('data-tab');
+            
+            // Update active tab
+            authTabs.forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Show corresponding form
+            if (targetTab === 'login') {
+                document.getElementById('loginForm').classList.remove('hidden');
+                document.getElementById('registerForm').classList.add('hidden');
+            } else {
+                document.getElementById('loginForm').classList.add('hidden');
+                document.getElementById('registerForm').classList.remove('hidden');
+            }
+        });
+    });
+    
+    // Customer login
+    if (customerLoginForm) {
+        customerLoginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await handleCustomerLogin();
+        });
+    }
+    
+    // Customer registration
+    if (customerRegisterForm) {
+        customerRegisterForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await handleCustomerRegistration();
+        });
+    }
+    
+    // Logout
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            localStorage.removeItem('customerUser');
+            localStorage.removeItem('userType');
+            location.reload();
+        });
+    }
+}
+
+async function handleCustomerLogin() {
+    const loginForm = document.getElementById('customerLoginForm');
+    const submitBtn = loginForm.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Logging in...';
+    submitBtn.disabled = true;
+    
+    try {
+        const loginData = {
+            type: 'customer_login',
+            email: document.getElementById('loginEmail').value,
+            password: document.getElementById('loginPassword').value,
+            businessId: currentBusinessId
+        };
+        
+        const response = await fetch('/api/auth', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(loginData)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Login failed: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Login failed');
+        }
+        
+        // Store customer info and show booking form
+        localStorage.setItem('customerUser', JSON.stringify(result.user));
+        localStorage.setItem('userType', 'customer');
+        currentUserId = result.user.id;
+        
+        showBookingForm(result.user);
+        
+    } catch (error) {
+        console.error('Login error:', error);
+        alert('Error logging in: ' + error.message);
+    } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+async function handleCustomerRegistration() {
+    const registerForm = document.getElementById('customerRegisterForm');
+    const submitBtn = registerForm.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Creating Account...';
+    submitBtn.disabled = true;
+    
+    try {
+        const password = document.getElementById('registerPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        
+        if (password !== confirmPassword) {
+            alert('Passwords do not match');
+            return;
+        }
+        
+        if (password.length < 6) {
+            alert('Password must be at least 6 characters long');
+            return;
+        }
+        
+        const registerData = {
+            type: 'customer_register',
+            name: document.getElementById('registerName').value,
+            email: document.getElementById('registerEmail').value,
+            phone: document.getElementById('registerPhone').value,
+            password: password,
+            businessId: currentBusinessId
+        };
+        
+        const response = await fetch('/api/auth', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(registerData)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Registration failed: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Registration failed');
+        }
+        
+        // Store customer info and show booking form
+        localStorage.setItem('customerUser', JSON.stringify(result.customer));
+        localStorage.setItem('userType', 'customer');
+        currentUserId = result.customer.id;
+        
+        showBookingForm(result.customer);
+        
+    } catch (error) {
+        console.error('Registration error:', error);
+        alert('Error creating account: ' + error.message);
+    } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+function showBookingForm(user) {
+    document.getElementById('authSection').classList.add('hidden');
+    document.getElementById('bookingSection').classList.remove('hidden');
+    document.getElementById('userName').textContent = user.name;
+    
+    // Load services for booking
+    loadServicesForBooking();
+}
+
+function loadServicesForBooking() {
+    // This should load services from the actual business data
+    // For now, using placeholder
+    const serviceSelect = document.getElementById('service');
+    if (serviceSelect) {
+        serviceSelect.innerHTML = '<option value="">Choose a service</option>';
+        // Add service options here based on business services
+    }
+}
+
+// Update the DOM Content Loaded function
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded - initializing application');
+    
+    // Business Registration/Login Page
+    if (document.getElementById('businessForm') || document.getElementById('businessLoginForm')) {
+        console.log('Initializing business authentication');
+        initBusinessAuthentication();
+        initBusinessRegistration();
+    }
+    
+    // Customer Booking Page
+    if (document.getElementById('authSection')) {
+        console.log('Initializing customer authentication');
+        initCustomerAuthentication();
+        
+        // Get business ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        currentBusinessId = urlParams.get('business');
+        
+        if (!currentBusinessId) {
+            alert('Invalid booking link');
+            return;
+        }
+        
+        // Load business info
+        loadBusinessInfo();
+        
+        // Check if customer is already logged in
+        const customerUser = localStorage.getItem('customerUser');
+        const userType = localStorage.getItem('userType');
+        
+        if (customerUser && userType === 'customer' && currentBusinessId) {
+            const user = JSON.parse(customerUser);
+            // Verify this customer belongs to the current business
+            if (user.business_id === currentBusinessId) {
+                currentUserId = user.id;
+                showBookingForm(user);
+            }
+        }
+    }
+    
+    // Business Dashboard
+    if (document.getElementById('dashboardTitle')) {
+        console.log('Initializing business dashboard');
+        initBusinessDashboard();
+        
+        // Check if business user is logged in
+        const businessUser = localStorage.getItem('businessUser');
+        const userType = localStorage.getItem('userType');
+        
+        if (businessUser && userType === 'business') {
+            const user = JSON.parse(businessUser);
+            const urlParams = new URLSearchParams(window.location.search);
+            const businessId = urlParams.get('id');
+            
+            // Verify the logged-in business owns this dashboard
+            if (user.id === businessId) {
+                currentBusinessId = businessId;
+                loadBusinessData();
+                loadAppointments();
+            } else {
+                alert('Access denied');
+                window.location.href = 'index.html';
+            }
+        } else {
+            alert('Please login first');
+            window.location.href = 'index.html';
+        }
+    }
+});
+
 // Customer Booking Functions
 function initCustomerBooking() {
     const userForm = document.getElementById('userForm');
@@ -220,84 +590,82 @@ function initCustomerBooking() {
     loadBusinessInfo();
     
     // User form submission
-    userForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const userData = {
-            businessId: currentBusinessId,
-            name: document.getElementById('userName').value,
-            email: document.getElementById('userEmail').value,
-            phone: document.getElementById('userPhone').value
-        };
-        
-        try {
-            // In a real app, we would create or get the user here
-            // For simplicity, we'll just store the user data
-            currentUserId = userData.email; // Using email as a simple identifier
+    if (userForm) {
+        userForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
             
-            // Hide user form and show booking form
-            document.getElementById('userInfoForm').classList.add('hidden');
-            document.getElementById('bookingForm').classList.remove('hidden');
+            const userData = {
+                businessId: currentBusinessId,
+                name: document.getElementById('userName').value,
+                email: document.getElementById('userEmail').value,
+                phone: document.getElementById('userPhone').value
+            };
             
-            // Load services for this business
-            loadServices();
-        } catch (error) {
-            alert('Error: ' + error.message);
-        }
-    });
+            try {
+                currentUserId = userData.email;
+                
+                document.getElementById('userInfoForm').classList.add('hidden');
+                document.getElementById('bookingForm').classList.remove('hidden');
+                
+                loadServices();
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+    }
     
     // Appointment form submission
-    appointmentForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const appointmentData = {
-            businessId: currentBusinessId,
-            userId: currentUserId,
-            service: document.getElementById('service').value,
-            appointmentDate: document.getElementById('appointmentDate').value,
-            notes: document.getElementById('notes').value
-        };
-        
-        try {
-            const response = await fetch('/api/appointments', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(appointmentData)
-            });
+    if (appointmentForm) {
+        appointmentForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
             
-            const result = await response.json();
+            const appointmentData = {
+                businessId: currentBusinessId,
+                userId: currentUserId,
+                service: document.getElementById('service').value,
+                appointmentDate: document.getElementById('appointmentDate').value,
+                notes: document.getElementById('notes').value
+            };
             
-            if (response.ok) {
-                // Show confirmation
-                document.getElementById('bookingForm').classList.add('hidden');
-                document.getElementById('confirmationMessage').classList.remove('hidden');
-            } else {
-                alert('Error: ' + result.error);
+            try {
+                const response = await fetch('/api/appointments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(appointmentData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('bookingForm').classList.add('hidden');
+                    document.getElementById('confirmationMessage').classList.remove('hidden');
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error booking appointment: ' + error.message);
             }
-        } catch (error) {
-            alert('Error booking appointment: ' + error.message);
-        }
-    });
+        });
+    }
     
     // Book another appointment
-    bookAnotherBtn.addEventListener('click', function() {
-        document.getElementById('confirmationMessage').classList.add('hidden');
-        document.getElementById('bookingForm').classList.remove('hidden');
-        document.getElementById('appointmentForm').reset();
-    });
+    if (bookAnotherBtn) {
+        bookAnotherBtn.addEventListener('click', function() {
+            document.getElementById('confirmationMessage').classList.add('hidden');
+            document.getElementById('bookingForm').classList.remove('hidden');
+            document.getElementById('appointmentForm').reset();
+        });
+    }
 }
 
 function loadBusinessInfo() {
     // In a real implementation, we would fetch business details from the API
-    // For now, we'll just set a placeholder
     document.getElementById('businessTitle').textContent = "Salon Booking";
 }
 
 function loadServices() {
-    // In a real implementation, we would fetch services from the business API
-    // For now, we'll use some sample services
     const services = [
         { name: "Haircut", price: 30, duration: 30 },
         { name: "Hair Color", price: 80, duration: 120 },
@@ -306,16 +674,18 @@ function loadServices() {
     ];
     
     const serviceSelect = document.getElementById('service');
-    serviceSelect.innerHTML = '<option value="">Choose a service</option>';
-    
-    services.forEach(service => {
-        const option = document.createElement('option');
-        option.value = service.name;
-        option.textContent = `${service.name} - $${service.price} (${service.duration} min)`;
-        serviceSelect.appendChild(option);
-    });
-    
-    businessServices = services;
+    if (serviceSelect) {
+        serviceSelect.innerHTML = '<option value="">Choose a service</option>';
+        
+        services.forEach(service => {
+            const option = document.createElement('option');
+            option.value = service.name;
+            option.textContent = `${service.name} - $${service.price} (${service.duration} min)`;
+            serviceSelect.appendChild(option);
+        });
+        
+        businessServices = services;
+    }
 }
 
 // Business Dashboard Functions
@@ -339,45 +709,53 @@ function initBusinessDashboard() {
     loadAppointments();
     
     // Refresh button
-    refreshBtn.addEventListener('click', function() {
-        loadAppointments();
-    });
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function() {
+            loadAppointments();
+        });
+    }
     
     // QR code button
-    qrBtn.addEventListener('click', async function() {
-        try {
-            const response = await fetch('/api/qrcode', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ businessId: currentBusinessId })
-            });
-            
-            const result = await response.json();
-            
-            if (response.ok) {
-                document.getElementById('modalQrCode').innerHTML = `<img src="${result.qrCode}" alt="QR Code">`;
-                modal.classList.remove('hidden');
-            } else {
-                alert('Error: ' + result.error);
+    if (qrBtn) {
+        qrBtn.addEventListener('click', async function() {
+            try {
+                const response = await fetch('/api/qrcode', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ businessId: currentBusinessId })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('modalQrCode').innerHTML = `<img src="${result.qrCode}" alt="QR Code">`;
+                    modal.classList.remove('hidden');
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error generating QR code: ' + error.message);
             }
-        } catch (error) {
-            alert('Error generating QR code: ' + error.message);
-        }
-    });
+        });
+    }
     
     // Close modal
-    closeModal.addEventListener('click', function() {
-        modal.classList.add('hidden');
-    });
+    if (closeModal) {
+        closeModal.addEventListener('click', function() {
+            modal.classList.add('hidden');
+        });
+    }
     
     // Close modal when clicking outside
-    window.addEventListener('click', function(e) {
-        if (e.target === modal) {
-            modal.classList.add('hidden');
-        }
-    });
+    if (modal) {
+        window.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                modal.classList.add('hidden');
+            }
+        });
+    }
 }
 
 async function loadBusinessData() {
@@ -413,6 +791,8 @@ async function loadAppointments() {
 
 function displayAppointments(appointments) {
     const appointmentsList = document.getElementById('appointmentsList');
+    if (!appointmentsList) return;
+    
     appointmentsList.innerHTML = '';
     
     if (appointments.length === 0) {
@@ -458,9 +838,13 @@ function updateStats(appointments) {
         apt.status === 'pending'
     );
     
-    document.getElementById('todayCount').textContent = todayAppointments.length;
-    document.getElementById('pendingCount').textContent = pendingAppointments.length;
-    document.getElementById('totalCount').textContent = appointments.length;
+    const todayCount = document.getElementById('todayCount');
+    const pendingCount = document.getElementById('pendingCount');
+    const totalCount = document.getElementById('totalCount');
+    
+    if (todayCount) todayCount.textContent = todayAppointments.length;
+    if (pendingCount) pendingCount.textContent = pendingAppointments.length;
+    if (totalCount) totalCount.textContent = appointments.length;
 }
 
 async function updateAppointmentStatus(appointmentId, status) {
@@ -476,7 +860,7 @@ async function updateAppointmentStatus(appointmentId, status) {
         const result = await response.json();
         
         if (response.ok) {
-            loadAppointments(); // Refresh the list
+            loadAppointments();
         } else {
             alert('Error: ' + result.error);
         }
