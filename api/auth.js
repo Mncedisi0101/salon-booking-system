@@ -13,10 +13,16 @@ module.exports = async (req, res) => {
 
   if (req.method === 'POST') {
     try {
-      const { type, email, password, name, phone, businessId } = req.body;
+      const { type, email, password, name, phone, businessId, address, services } = req.body;
+
+      console.log('Auth request received:', { type, email });
 
       if (type === 'business_register') {
         // Business Registration
+        if (!email || !password || !name) {
+          return res.status(400).json({ error: 'Email, password, and name are required' });
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
         
         const { data, error } = await supabase
@@ -26,13 +32,18 @@ module.exports = async (req, res) => {
             email, 
             phone, 
             password: hashedPassword,
-            address: req.body.address,
-            services: req.body.services 
+            address: address,
+            services: services 
           }])
           .select();
         
         if (error) {
+          console.error('Business registration error:', error);
           return res.status(400).json({ error: error.message });
+        }
+        
+        if (!data || data.length === 0) {
+          return res.status(400).json({ error: 'Failed to create business account' });
         }
         
         return res.status(200).json({ 
@@ -43,21 +54,38 @@ module.exports = async (req, res) => {
 
       } else if (type === 'business_login') {
         // Business Login
+        if (!email || !password) {
+          return res.status(400).json({ error: 'Email and password are required' });
+        }
+
+        console.log('Business login attempt for:', email);
+        
         const { data: business, error } = await supabase
           .from('businesses')
           .select('*')
           .eq('email', email)
           .single();
 
-        if (error || !business) {
+        if (error) {
+          console.error('Business login query error:', error);
           return res.status(400).json({ error: 'Invalid email or password' });
         }
 
+        if (!business) {
+          console.error('Business not found for email:', email);
+          return res.status(400).json({ error: 'Invalid email or password' });
+        }
+
+        console.log('Business found, checking password...');
+        
         const validPassword = await bcrypt.compare(password, business.password);
         if (!validPassword) {
+          console.error('Invalid password for business:', email);
           return res.status(400).json({ error: 'Invalid email or password' });
         }
 
+        console.log('Business login successful for:', email);
+        
         return res.status(200).json({
           user: business,
           type: 'business',
@@ -68,6 +96,10 @@ module.exports = async (req, res) => {
         // Customer Registration
         if (!businessId) {
           return res.status(400).json({ error: 'Business ID is required' });
+        }
+
+        if (!email || !password || !name) {
+          return res.status(400).json({ error: 'Email, password, and name are required' });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -84,7 +116,12 @@ module.exports = async (req, res) => {
           .select();
         
         if (error) {
+          console.error('Customer registration error:', error);
           return res.status(400).json({ error: error.message });
+        }
+        
+        if (!data || data.length === 0) {
+          return res.status(400).json({ error: 'Failed to create customer account' });
         }
         
         return res.status(200).json({ 
@@ -99,6 +136,10 @@ module.exports = async (req, res) => {
           return res.status(400).json({ error: 'Business ID is required' });
         }
 
+        if (!email || !password) {
+          return res.status(400).json({ error: 'Email and password are required' });
+        }
+
         const { data: customer, error } = await supabase
           .from('customers')
           .select('*')
@@ -107,6 +148,7 @@ module.exports = async (req, res) => {
           .single();
 
         if (error || !customer) {
+          console.error('Customer login error:', error);
           return res.status(400).json({ error: 'Invalid email or password' });
         }
 
@@ -126,8 +168,8 @@ module.exports = async (req, res) => {
       }
 
     } catch (error) {
-      console.error('Auth error:', error);
-      return res.status(500).json({ error: 'Internal server error' });
+      console.error('Auth server error:', error);
+      return res.status(500).json({ error: 'Internal server error: ' + error.message });
     }
   }
 

@@ -280,6 +280,8 @@ async function handleBusinessLogin() {
             password: document.getElementById('loginPassword').value
         };
         
+        console.log('Sending login request:', loginData);
+        
         const response = await fetch('/api/auth', {
             method: 'POST',
             headers: {
@@ -288,11 +290,23 @@ async function handleBusinessLogin() {
             body: JSON.stringify(loginData)
         });
         
-        if (!response.ok) {
-            throw new Error(`Login failed: ${response.status}`);
+        console.log('Login response status:', response.status);
+        
+        // Check if response is JSON first
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Non-JSON login response:', text);
+            throw new Error(`Server returned non-JSON: ${response.status}`);
         }
         
         const result = await response.json();
+        console.log('Login result:', result);
+        
+        if (!response.ok) {
+            // This means HTTP status is not 200-299
+            throw new Error(result.error || `Login failed with status: ${response.status}`);
+        }
         
         if (!result.success) {
             throw new Error(result.error || 'Login failed');
@@ -302,6 +316,7 @@ async function handleBusinessLogin() {
         localStorage.setItem('businessUser', JSON.stringify(result.user));
         localStorage.setItem('userType', 'business');
         
+        console.log('Login successful, redirecting to dashboard...');
         // Redirect to dashboard
         window.location.href = `business.html?id=${result.user.id}`;
         
@@ -313,7 +328,6 @@ async function handleBusinessLogin() {
         submitBtn.disabled = false;
     }
 }
-
 function initCustomerAuthentication() {
     const authTabs = document.querySelectorAll('.auth-tab');
     const customerLoginForm = document.getElementById('customerLoginForm');
@@ -382,6 +396,8 @@ async function handleCustomerLogin() {
             businessId: currentBusinessId
         };
         
+        console.log('Sending customer login request:', loginData);
+        
         const response = await fetch('/api/auth', {
             method: 'POST',
             headers: {
@@ -390,11 +406,22 @@ async function handleCustomerLogin() {
             body: JSON.stringify(loginData)
         });
         
-        if (!response.ok) {
-            throw new Error(`Login failed: ${response.status}`);
+        console.log('Customer login response status:', response.status);
+        
+        // Check if response is JSON first
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Non-JSON customer login response:', text);
+            throw new Error(`Server returned non-JSON: ${response.status}`);
         }
         
         const result = await response.json();
+        console.log('Customer login result:', result);
+        
+        if (!response.ok) {
+            throw new Error(result.error || `Login failed with status: ${response.status}`);
+        }
         
         if (!result.success) {
             throw new Error(result.error || 'Login failed');
