@@ -135,7 +135,7 @@ function initBusinessRegistration() {
         }
     });
 
-    // Separate function for QR code generation
+    //  function for QR code generation
     async function generateQRCode(businessId) {
         try {
             console.log('Generating QR code for business:', businessId);
@@ -161,7 +161,7 @@ function initBusinessRegistration() {
                 throw new Error(qrResult.error || 'Failed to generate QR code');
             }
             
-            // Update QR code container
+            //  QR code container
             const qrCodeContainer = document.getElementById('qrCodeContainer');
             if (qrCodeContainer) {
                 if (qrResult.qrCode) {
@@ -171,12 +171,12 @@ function initBusinessRegistration() {
                 }
             }
             
-            // Update business ID display
+            //  business ID display
             const businessIdElement = document.getElementById('businessId');
             if (businessIdElement) {
                 businessIdElement.textContent = businessId;
                 
-                // Update dashboard link
+                //  dashboard link
                 const dashboardLink = document.querySelector('#successMessage a');
                 if (dashboardLink) {
                     dashboardLink.href = `business.html?id=${businessId}`;
