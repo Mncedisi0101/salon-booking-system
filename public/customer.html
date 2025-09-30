@@ -19,9 +19,10 @@
                 <div class="auth-tabs">
                     <button class="auth-tab active" data-tab="login">Login</button>
                     <button class="auth-tab" data-tab="register">Sign Up</button>
+                    <button class="auth-tab" data-tab="business">Business Login</button>
                 </div>
                 
-                <!-- Login Form -->
+                <!-- Customer Login Form -->
                 <div id="loginForm" class="auth-form">
                     <h2>Customer Login</h2>
                     <form id="customerLoginForm">
@@ -39,7 +40,7 @@
                     </form>
                 </div>
                 
-                <!-- Registration Form -->
+                <!-- Customer Registration Form -->
                 <div id="registerForm" class="auth-form hidden">
                     <h2>Customer Sign Up</h2>
                     <form id="customerRegisterForm">
@@ -71,9 +72,27 @@
                         <button type="submit" class="btn-primary">Create Account</button>
                     </form>
                 </div>
+                
+                <!-- Business Login Form -->
+                <div id="businessForm" class="auth-form hidden">
+                    <h2>Business Login</h2>
+                    <form id="businessLoginForm">
+                        <div class="form-group">
+                            <label for="businessLoginEmail">Email</label>
+                            <input type="email" id="businessLoginEmail" name="email" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="businessLoginPassword">Password</label>
+                            <input type="password" id="businessLoginPassword" name="password" required>
+                        </div>
+                        
+                        <button type="submit" class="btn-primary">Business Login</button>
+                    </form>
+                </div>
             </div>
             
-            <!-- Booking Section (shown after authentication) -->
+            <!-- Customer Booking Section (shown after customer authentication) -->
             <div id="bookingSection" class="form-container hidden">
                 <div class="user-info">
                     <p>Welcome, <span id="userName"></span>! <a href="#" id="logoutBtn">Logout</a></p>
@@ -100,6 +119,13 @@
                     
                     <button type="submit" class="btn-primary">Book Appointment</button>
                 </form>
+            </div>
+            
+            <!-- Business Dashboard Redirect (shown after business authentication) -->
+            <div id="businessRedirect" class="form-container hidden">
+                <h2>Business Login Successful!</h2>
+                <p>You have successfully logged in as a business owner.</p>
+                <button id="goToDashboard" class="btn-primary">Go to Business Dashboard</button>
             </div>
             
             <div id="confirmationMessage" class="hidden">

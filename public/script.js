@@ -4,6 +4,7 @@ let currentUserId = null;
 let currentUserType = null;
 let currentBusinessData = null;
 let businessServices = [];
+let userType = null; // 'customer' or 'business'
 
 // Business Registration Functions
 function initBusinessRegistration() {
@@ -32,31 +33,9 @@ function initBusinessRegistration() {
     }
 }
 
-// Authentication functions
+// Authentication functions for index page
 function initBusinessAuthentication() {
     const businessForm = document.getElementById('businessForm');
-    const loginForm = document.getElementById('loginForm');
-    const showBusinessLogin = document.getElementById('showBusinessLogin');
-    const showBusinessRegister = document.getElementById('showBusinessRegister');
-    
-    // Show login form
-    if (showBusinessLogin) {
-        showBusinessLogin.addEventListener('click', function(e) {
-            e.preventDefault();
-            document.getElementById('businessForm').closest('.form-container').classList.add('hidden');
-            document.getElementById('businessLoginForm').classList.remove('hidden');
-        });
-    }
-    
-    // Show registration form
-    if (showBusinessRegister) {
-        showBusinessRegister.addEventListener('click', function(e) {
-            e.preventDefault();
-            document.getElementById('businessLoginForm').classList.add('hidden');
-            document.getElementById('businessForm').closest('.form-container').classList.remove('hidden');
-        });
-    }
-    
     // Business registration
     if (businessForm) {
         businessForm.addEventListener('submit', async function(e) {
@@ -64,16 +43,7 @@ function initBusinessAuthentication() {
             await handleBusinessRegistration();
         });
     }
-    
-    // Business login
-    if (loginForm) {
-        loginForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            await handleBusinessLogin();
-        });
-    }
 }
-
 async function handleBusinessRegistration() {
     const businessForm = document.getElementById('businessForm');
     const submitBtn = businessForm.querySelector('button[type="submit"]');
@@ -266,72 +236,13 @@ async function generateQRCode(businessId) {
     }
 }
 
-async function handleBusinessLogin() {
-    const loginForm = document.getElementById('loginForm');
-    const submitBtn = loginForm.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    submitBtn.textContent = 'Logging in...';
-    submitBtn.disabled = true;
-    
-    try {
-        const loginData = {
-            type: 'business_login',
-            email: document.getElementById('loginEmail').value,
-            password: document.getElementById('loginPassword').value
-        };
-        
-        console.log('Sending login request:', loginData);
-        
-        const response = await fetch('/api/auth', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(loginData)
-        });
-        
-        console.log('Login response status:', response.status);
-        
-        // Check if response is JSON first
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            const text = await response.text();
-            console.error('Non-JSON login response:', text);
-            throw new Error(`Server returned non-JSON: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        console.log('Login result:', result);
-        
-        if (!response.ok) {
-            // This means HTTP status is not 200-299
-            throw new Error(result.error || `Login failed with status: ${response.status}`);
-        }
-        
-        if (!result.success) {
-            throw new Error(result.error || 'Login failed');
-        }
-        
-        // Store business info and redirect to dashboard
-        localStorage.setItem('businessUser', JSON.stringify(result.user));
-        localStorage.setItem('userType', 'business');
-        
-        console.log('Login successful, redirecting to dashboard...');
-        // Redirect to dashboard
-        window.location.href = `business.html?id=${result.user.id}`;
-        
-    } catch (error) {
-        console.error('Login error:', error);
-        alert('Error logging in: ' + error.message);
-    } finally {
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-    }
-}
+// Customer Authentication Functions
 function initCustomerAuthentication() {
     const authTabs = document.querySelectorAll('.auth-tab');
     const customerLoginForm = document.getElementById('customerLoginForm');
     const customerRegisterForm = document.getElementById('customerRegisterForm');
+    const businessLoginForm = document.getElementById('businessLoginForm');
+    const goToDashboardBtn = document.getElementById('goToDashboard');
     
     // Tab switching
     authTabs.forEach(tab => {
@@ -343,12 +254,16 @@ function initCustomerAuthentication() {
             this.classList.add('active');
             
             // Show corresponding form
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('registerForm').classList.add('hidden');
+            document.getElementById('businessForm').classList.add('hidden');
+            
             if (targetTab === 'login') {
                 document.getElementById('loginForm').classList.remove('hidden');
-                document.getElementById('registerForm').classList.add('hidden');
-            } else {
-                document.getElementById('loginForm').classList.add('hidden');
+            } else if (targetTab === 'register') {
                 document.getElementById('registerForm').classList.remove('hidden');
+            } else if (targetTab === 'business') {
+                document.getElementById('businessForm').classList.remove('hidden');
             }
         });
     });
@@ -369,15 +284,96 @@ function initCustomerAuthentication() {
         });
     }
     
+    // Business login
+    if (businessLoginForm) {
+        businessLoginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await handleBusinessLoginFromCustomerPage();
+        });
+    }
+    
+    // Go to dashboard button
+    if (goToDashboardBtn) {
+        goToDashboardBtn.addEventListener('click', function() {
+            const businessUser = JSON.parse(localStorage.getItem('businessUser'));
+            if (businessUser) {
+                window.location.href = `business.html?id=${businessUser.id}`;
+            }
+        });
+    }
+    
     // Logout
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', function(e) {
             e.preventDefault();
             localStorage.removeItem('customerUser');
+            localStorage.removeItem('businessUser');
             localStorage.removeItem('userType');
             location.reload();
         });
+    }
+}
+
+async function handleBusinessLoginFromCustomerPage() {
+    const businessLoginForm = document.getElementById('businessLoginForm');
+    const submitBtn = businessLoginForm.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Logging in...';
+    submitBtn.disabled = true;
+    
+    try {
+        const loginData = {
+            type: 'business_login',
+            email: document.getElementById('businessLoginEmail').value,
+            password: document.getElementById('businessLoginPassword').value
+        };
+        
+        console.log('Sending business login request:', loginData);
+        
+        const response = await fetch('/api/auth', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(loginData)
+        });
+        
+        console.log('Business login response status:', response.status);
+        
+        // Check if response is JSON first
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Non-JSON business login response:', text);
+            throw new Error(`Server returned non-JSON: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('Business login result:', result);
+        
+        if (!response.ok) {
+            throw new Error(result.error || `Login failed with status: ${response.status}`);
+        }
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Login failed');
+        }
+        
+        // Store business info and show redirect option
+        localStorage.setItem('businessUser', JSON.stringify(result.user));
+        localStorage.setItem('userType', 'business');
+        
+        // Show business redirect section
+        document.getElementById('authSection').classList.add('hidden');
+        document.getElementById('businessRedirect').classList.remove('hidden');
+        
+    } catch (error) {
+        console.error('Business login error:', error);
+        alert('Error logging in: ' + error.message);
+    } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
     }
 }
 
@@ -530,9 +526,9 @@ function loadServicesForBooking() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded - initializing application');
     
-    // Business Registration/Login Page
-    if (document.getElementById('businessForm') || document.getElementById('businessLoginForm')) {
-        console.log('Initializing business authentication');
+    // Business Registration Page
+    if (document.getElementById('businessForm')) {
+        console.log('Initializing business registration');
         initBusinessAuthentication();
         initBusinessRegistration();
     }
@@ -547,24 +543,45 @@ document.addEventListener('DOMContentLoaded', function() {
         currentBusinessId = urlParams.get('business');
         
         if (!currentBusinessId) {
-            alert('Invalid booking link');
-            return;
+            // If no business ID, check if user is trying to login as business
+            const userType = localStorage.getItem('userType');
+            const businessUser = localStorage.getItem('businessUser');
+            
+            if (userType === 'business' && businessUser) {
+                // Redirect to business dashboard
+                const user = JSON.parse(businessUser);
+                window.location.href = `business.html?id=${user.id}`;
+                return;
+            }
+            
+            // Show business login tab by default if no business ID
+            document.querySelector('[data-tab="business"]').click();
+        } else {
+            // Load business info if business ID is present
+            loadBusinessInfo();
+            
+            // Check if customer is already logged in
+            const customerUser = localStorage.getItem('customerUser');
+            const userType = localStorage.getItem('userType');
+            
+            if (customerUser && userType === 'customer' && currentBusinessId) {
+                const user = JSON.parse(customerUser);
+                // Verify this customer belongs to the current business
+                if (user.business_id === currentBusinessId) {
+                    currentUserId = user.id;
+                    showBookingForm(user);
+                }
+            }
         }
         
-        // Load business info
-        loadBusinessInfo();
-        
-        // Check if customer is already logged in
-        const customerUser = localStorage.getItem('customerUser');
+        // Check if business user is already logged in
+        const businessUser = localStorage.getItem('businessUser');
         const userType = localStorage.getItem('userType');
         
-        if (customerUser && userType === 'customer' && currentBusinessId) {
-            const user = JSON.parse(customerUser);
-            // Verify this customer belongs to the current business
-            if (user.business_id === currentBusinessId) {
-                currentUserId = user.id;
-                showBookingForm(user);
-            }
+        if (businessUser && userType === 'business') {
+            const user = JSON.parse(businessUser);
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('businessRedirect').classList.remove('hidden');
         }
     }
     
@@ -589,15 +606,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadAppointments();
             } else {
                 alert('Access denied');
-                window.location.href = 'index.html';
+                window.location.href = 'customer.html?type=business';
             }
         } else {
             alert('Please login first');
-            window.location.href = 'index.html';
+            window.location.href = 'customer.html?type=business';
         }
     }
 });
-
 // Customer Booking Functions
 function initCustomerBooking() {
     const userForm = document.getElementById('userForm');

@@ -47,7 +47,7 @@
                         <div class="services-container">
                             <div class="service-input">
                                 <input type="text" placeholder="Service name" class="service-name" required>
-                                <input type="number" placeholder="Price ($)" class="service-price" min="0" step="0.01" required>
+                                <input type="number" placeholder="Price (R)" class="service-price" min="0" step="0.01" required>
                                 <input type="number" placeholder="Duration (minutes)" class="service-duration" min="1" required>
                                 <button type="button" class="remove-service">Remove</button>
                             </div>
@@ -59,29 +59,7 @@
                 </form>
                 
                 <div class="auth-switch">
-                    <p>Already have an account? <a href="#" id="showBusinessLogin">Business Login</a></p>
-                </div>
-            </div>
-            
-            <!-- Business Login Form -->
-            <div id="businessLoginForm" class="form-container hidden">
-                <h2>Business Login</h2>
-                <form id="loginForm">
-                    <div class="form-group">
-                        <label for="loginEmail">Email</label>
-                        <input type="email" id="loginEmail" name="email" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="loginPassword">Password</label>
-                        <input type="password" id="loginPassword" name="password" required>
-                    </div>
-                    
-                    <button type="submit" class="btn-primary">Login</button>
-                </form>
-                
-                <div class="auth-switch">
-                    <p>Don't have an account? <a href="#" id="showBusinessRegister">Business Registration</a></p>
+                    <p>Already have a business? <a href="customer.html?type=business">Business Login</a></p>
                 </div>
             </div>
             
