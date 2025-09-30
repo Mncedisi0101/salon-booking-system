@@ -3,409 +3,988 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SalonSuite - Premium Management Portal</title>
+    <title>Salon Booking System</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary: #8a4fff;
+            --primary-light: #a37dff;
+            --secondary: #ff6b95;
+            --dark: #2d2b55;
+            --light: #f7f7ff;
+            --gray: #7b7b8f;
+            --success: #4caf50;
+            --warning: #ff9800;
+            --danger: #f44336;
+            --card-shadow: 0 8px 20px rgba(138, 79, 255, 0.15);
+            --transition: all 0.3s ease;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Poppins', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        
+
         body {
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            background-color: #f5f7fb;
+            color: var(--dark);
+            display: flex;
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
         }
-        
-        .container {
-            width: 100%;
-            max-width: 1200px;
-            display: flex;
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
-            border-radius: 20px;
-            overflow: hidden;
-        }
-        
-        .brand-section {
-            flex: 1;
-            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3') center/cover no-repeat;
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, var(--primary) 0%, var(--dark) 100%);
             color: white;
-            padding: 40px;
+            padding: 25px 0;
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
+            transition: var(--transition);
+            box-shadow: var(--card-shadow);
+            z-index: 100;
         }
-        
-        .brand-logo {
-            width: 120px;
-            height: 120px;
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            border-radius: 50%;
+
+        .sidebar-header {
+            padding: 0 25px 25px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 25px;
+        }
+
+        .logo {
             display: flex;
-            justify-content: center;
             align-items: center;
             margin-bottom: 20px;
-            font-size: 50px;
-            animation: pulse 2s infinite;
         }
-        
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            color: var(--primary);
+            font-size: 20px;
         }
-        
-        .brand-section h1 {
-            font-size: 36px;
-            margin-bottom: 10px;
+
+        .logo-text {
+            font-size: 22px;
             font-weight: 700;
         }
-        
-        .brand-section p {
-            font-size: 18px;
-            margin-bottom: 30px;
+
+        .salon-name {
+            font-size: 16px;
             opacity: 0.9;
+            margin-top: 5px;
+            padding-left: 52px;
+            word-break: break-word;
         }
-        
-        .features {
-            text-align: left;
-            width: 100%;
-            max-width: 400px;
+
+        .sidebar-menu {
+            list-style: none;
+            flex-grow: 1;
         }
-        
-        .feature {
+
+        .sidebar-menu li {
+            padding: 15px 25px;
+            margin: 5px 0;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .sidebar-menu li i {
+            margin-right: 15px;
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .sidebar-menu li:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-menu li.active {
+            background: rgba(255, 255, 255, 0.15);
+            border-left: 4px solid white;
+        }
+
+        .badge {
+            background: var(--secondary);
+            color: white;
+            border-radius: 20px;
+            padding: 3px 10px;
+            font-size: 12px;
+            position: absolute;
+            right: 25px;
+        }
+
+        .sidebar-footer {
+            padding: 20px 25px 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: auto;
+        }
+
+        .user-info {
             display: flex;
             align-items: center;
             margin-bottom: 20px;
         }
-        
-        .feature i {
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            font-weight: bold;
+            margin-right: 12px;
+            font-size: 18px;
+        }
+
+        .user-details {
+            flex-grow: 1;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .user-role {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .logout-btn {
+            display: flex;
+            align-items: center;
+            color: white;
+            opacity: 0.8;
+            transition: var(--transition);
+            cursor: pointer;
+            padding: 10px 0;
+        }
+
+        .logout-btn:hover {
+            opacity: 1;
+        }
+
+        .logout-btn i {
+            margin-right: 12px;
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .page-title h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .page-title p {
+            color: var(--gray);
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .notification-btn {
             width: 40px;
             height: 40px;
             border-radius: 50%;
+            background: var(--light);
             display: flex;
-            justify-content: center;
             align-items: center;
-            margin-right: 15px;
-            font-size: 18px;
-        }
-        
-        .login-section {
-            flex: 1;
-            background: white;
-            padding: 50px 40px;
-            display: flex;
-            flex-direction: column;
             justify-content: center;
-        }
-        
-        .login-header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-        
-        .login-header h2 {
-            font-size: 28px;
-            color: #333;
-            margin-bottom: 10px;
-        }
-        
-        .login-header p {
-            color: #777;
-            font-size: 16px;
-        }
-        
-        .form-group {
-            margin-bottom: 25px;
-            position: relative;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: #444;
-        }
-        
-        .input-with-icon {
-            position: relative;
-        }
-        
-        .input-with-icon i {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #6a11cb;
-        }
-        
-        .input-with-icon input {
-            width: 100%;
-            padding: 15px 15px 15px 50px;
-            border: 2px solid #e6e6e6;
-            border-radius: 10px;
-            font-size: 16px;
-            transition: all 0.3s;
-        }
-        
-        .input-with-icon input:focus {
-            border-color: #6a11cb;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(106, 17, 203, 0.1);
-        }
-        
-        .password-toggle {
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
+            color: var(--dark);
             cursor: pointer;
-            color: #999;
+            position: relative;
         }
-        
-        .remember-forgot {
+
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--secondary);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .date-display {
+            background: var(--light);
+            padding: 10px 15px;
+            border-radius: 12px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        /* Dashboard Content */
+        .dashboard-content {
+            padding: 30px;
+            flex-grow: 1;
+        }
+
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            display: flex;
+            align-items: center;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-right: 20px;
+        }
+
+        .stat-icon.calendar {
+            background: rgba(138, 79, 255, 0.15);
+            color: var(--primary);
+        }
+
+        .stat-icon.clock {
+            background: rgba(255, 107, 149, 0.15);
+            color: var(--secondary);
+        }
+
+        .stat-info h3 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-info p {
+            color: var(--gray);
+            font-size: 14px;
+        }
+
+        /* Appointments Section */
+        .appointments-section {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 30px;
+        }
+
+        .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 25px;
-            font-size: 14px;
         }
-        
-        .remember {
+
+        .section-header h2 {
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .filters {
             display: flex;
+            gap: 15px;
             align-items: center;
         }
-        
-        .remember input {
-            margin-right: 8px;
-        }
-        
-        .forgot-password {
-            color: #6a11cb;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        
-        .forgot-password:hover {
-            text-decoration: underline;
-        }
-        
-        .btn-login {
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            color: white;
-            border: none;
-            padding: 16px;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            width: 100%;
-            transition: all 0.3s;
-            box-shadow: 0 4px 10px rgba(106, 17, 203, 0.3);
-        }
-        
-        .btn-login:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(106, 17, 203, 0.4);
-        }
-        
-        .register-link {
-            text-align: center;
-            margin-top: 30px;
-            color: #777;
-            font-size: 15px;
-        }
-        
-        .register-link a {
-            color: #6a11cb;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        
-        .register-link a:hover {
-            text-decoration: underline;
-        }
-        
-        .success-message {
-            background: #f0f9f0;
-            border-left: 4px solid #4caf50;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 20px;
+
+        .filter-group {
             display: flex;
-            align-items: center;
-            display: none;
+            flex-direction: column;
         }
-        
-        .success-message i {
-            color: #4caf50;
-            font-size: 24px;
-            margin-right: 15px;
-        }
-        
-        .success-content h3 {
-            color: #2e7d32;
+
+        .filter-group label {
+            font-size: 12px;
+            color: var(--gray);
             margin-bottom: 5px;
         }
-        
-        .success-content p {
-            color: #555;
+
+        .filter-group select, .filter-group input {
+            padding: 10px 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            min-width: 150px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        th {
+            font-weight: 600;
+            color: var(--gray);
             font-size: 14px;
         }
-        
-        @media (max-width: 900px) {
-            .container {
+
+        .customer-cell {
+            display: flex;
+            align-items: center;
+        }
+
+        .customer-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: var(--light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background: rgba(255, 152, 0, 0.15);
+            color: var(--warning);
+        }
+
+        .status-confirmed {
+            background: rgba(76, 175, 80, 0.15);
+            color: var(--success);
+        }
+
+        .action-btn {
+            padding: 8px 15px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-confirm {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-confirm:hover {
+            background: #3d8b40;
+        }
+
+        .btn-cancel {
+            background: #f0f0f0;
+            color: var(--gray);
+        }
+
+        .btn-cancel:hover {
+            background: #e0e0e0;
+        }
+
+        /* Daily Schedule */
+        .daily-schedule {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .schedule-slots {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .time-slot {
+            background: var(--light);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .time-slot.booked {
+            background: rgba(138, 79, 255, 0.1);
+            border: 1px solid var(--primary-light);
+        }
+
+        .time-slot.available {
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid var(--success);
+        }
+
+        .time {
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .slot-info {
+            font-size: 12px;
+            color: var(--gray);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            padding: 20px 25px;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 25px;
+        }
+
+        .modal-footer {
+            padding: 20px 25px;
+            background: #f9f9f9;
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 1100px) {
+            .sidebar {
+                width: 80px;
+            }
+            
+            .sidebar .logo-text, 
+            .sidebar .salon-name,
+            .sidebar .menu-text,
+            .sidebar .user-details,
+            .sidebar .logout-text {
+                display: none;
+            }
+            
+            .sidebar-menu li {
+                justify-content: center;
+            }
+            
+            .sidebar-menu li i {
+                margin-right: 0;
+            }
+            
+            .badge {
+                right: 10px;
+            }
+            
+            .sidebar-header, .sidebar-footer {
+                padding-left: 15px;
+                padding-right: 15px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
                 flex-direction: column;
-                max-width: 500px;
             }
             
-            .brand-section {
-                padding: 30px 20px;
+            .sidebar {
+                width: 100%;
+                height: auto;
+                padding: 15px;
             }
             
-            .login-section {
-                padding: 30px 25px;
+            .sidebar-header {
+                padding: 0 0 15px;
+                display: flex;
+                align-items: center;
+            }
+            
+            .logo {
+                margin-bottom: 0;
+                margin-right: 20px;
+            }
+            
+            .salon-name {
+                padding-left: 0;
+                margin-top: 0;
+            }
+            
+            .sidebar-menu {
+                display: flex;
+                overflow-x: auto;
+                margin-bottom: 15px;
+            }
+            
+            .sidebar-menu li {
+                padding: 10px 15px;
+                white-space: nowrap;
+            }
+            
+            .stats-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .filters {
+                flex-wrap: wrap;
+            }
+            
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .header-actions {
+                margin-top: 15px;
+                width: 100%;
+                justify-content: space-between;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="brand-section">
-            <div class="brand-logo">
-                <i class="fas fa-spa"></i>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-spa"></i>
+                </div>
+                <div class="logo-text">Salon Booking System</div>
             </div>
-            <h1>SalonSuite</h1>
-            <p>Premium Management Portal for Salon Owners</p>
-            
-            <div class="features">
-                <div class="feature">
-                    <i class="fas fa-calendar-alt"></i>
-                    <div>
-                        <h3>Appointment Management</h3>
-                        <p>Streamline your booking process</p>
+        </div>
+        <div class="salon-name" id="sidebarSalonName">Luxe Beauty Lounge</div>
+        
+        <ul class="sidebar-menu">
+            <li class="active">
+                <i class="fas fa-home"></i>
+                <span class="menu-text">Dashboard</span>
+            </li>
+            <li class="menu-item-with-badge">
+                <i class="fas fa-calendar-alt"></i>
+                <span class="menu-text">Appointments</span>
+                <span class="badge" id="appointmentBadge">3</span>
+            </li>
+            <li id="menuStylists">
+                <i class="fas fa-user-tie"></i>
+                <span class="menu-text">Stylists</span>
+            </li>
+            <li>
+                <i class="fas fa-qrcode"></i>
+                <span class="menu-text">QR Code</span>
+            </li>
+        </ul>
+        
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">E</div>
+                <div class="user-details">
+                    <div class="user-name" id="dashboardOwnerName">Emma Johnson</div>
+                    <div class="user-role">Salon Owner</div>
+                </div>
+            </div>
+            <div class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span class="logout-text">Logout</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <div class="page-title">
+                <h1 id="dashboardTitle">Salon Dashboard</h1>
+                <p>Manage your salon appointments and stylists</p>
+            </div>
+            <div class="header-actions">
+                <div class="notification-btn">
+                    <i class="fas fa-bell"></i>
+                    <div class="notification-badge">3</div>
+                </div>
+                <div class="date-display">
+                    <i class="fas fa-calendar-day"></i>
+                    <span id="currentDate">May 15, 2023</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-content">
+            <!-- Stats Cards -->
+            <div class="stats-cards">
+                <div class="stat-card">
+                    <div class="stat-icon calendar">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="todaysAppointmentsCount">8</h3>
+                        <p>Today's Appointments</p>
                     </div>
                 </div>
-                <div class="feature">
-                    <i class="fas fa-chart-line"></i>
-                    <div>
-                        <h3>Business Analytics</h3>
-                        <p>Track performance and growth</p>
+                <div class="stat-card">
+                    <div class="stat-icon clock">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="pendingAppointmentsCount">3</h3>
+                        <p>Pending Confirmations</p>
                     </div>
                 </div>
-                <div class="feature">
-                    <i class="fas fa-users"></i>
-                    <div>
-                        <h3>Client Database</h3>
-                        <p>Manage your client relationships</p>
+            </div>
+
+            <!-- Appointments Table -->
+            <div class="appointments-section">
+                <div class="section-header">
+                    <h2>Recent Appointments</h2>
+                    <div class="filters">
+                        <div class="filter-group">
+                            <label for="datePicker">Date</label>
+                            <input type="date" id="datePicker">
+                        </div>
+                        <div class="filter-group">
+                            <label for="stylistFilter">Stylist</label>
+                            <select id="stylistFilter">
+                                <option value="all">All Stylists</option>
+                                <option value="1">Sophia</option>
+                                <option value="2">Michael</option>
+                                <option value="3">Jessica</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="statusFilter">Status</label>
+                            <select id="statusFilter">
+                                <option value="all">All Appointments</option>
+                                <option value="pending">Pending Only</option>
+                                <option value="confirmed">Confirmed Only</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th>Service</th>
+                            <th>Stylist</th>
+                            <th>Date & Time</th>
+                            <th>Contact</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="appointmentsTbody">
+                        <tr>
+                            <td>
+                                <div class="customer-cell">
+                                    <div class="customer-avatar">S</div>
+                                    <div>Sarah Miller</div>
+                                </div>
+                            </td>
+                            <td>Hair Coloring</td>
+                            <td>Sophia</td>
+                            <td>May 15, 2023 at 10:00 AM</td>
+                            <td>sarah@email.com</td>
+                            <td><span class="status-badge status-confirmed">Confirmed</span></td>
+                            <td>
+                                <button class="action-btn btn-cancel">Cancel</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="customer-cell">
+                                    <div class="customer-avatar">J</div>
+                                    <div>James Wilson</div>
+                                </div>
+                            </td>
+                            <td>Beard Trim</td>
+                            <td>Michael</td>
+                            <td>May 15, 2023 at 2:30 PM</td>
+                            <td>james@email.com</td>
+                            <td><span class="status-badge status-pending">Pending</span></td>
+                            <td>
+                                <button class="action-btn btn-confirm">Confirm</button>
+                                <button class="action-btn btn-cancel">Cancel</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="customer-cell">
+                                    <div class="customer-avatar">M</div>
+                                    <div>Mia Thompson</div>
+                                </div>
+                            </td>
+                            <td>Haircut & Style</td>
+                            <td>Jessica</td>
+                            <td>May 15, 2023 at 4:00 PM</td>
+                            <td>mia@email.com</td>
+                            <td><span class="status-badge status-pending">Pending</span></td>
+                            <td>
+                                <button class="action-btn btn-confirm">Confirm</button>
+                                <button class="action-btn btn-cancel">Cancel</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Daily Schedule -->
+            <div class="daily-schedule">
+                <div class="section-header">
+                    <h2>Daily Schedule</h2>
+                </div>
+                <div class="schedule-slots" id="scheduleSlots">
+                    <div class="time-slot booked">
+                        <div class="time">9:00 AM</div>
+                        <div class="slot-info">Sarah Miller</div>
+                    </div>
+                    <div class="time-slot booked">
+                        <div class="time">10:30 AM</div>
+                        <div class="slot-info">Lisa Johnson</div>
+                    </div>
+                    <div class="time-slot available">
+                        <div class="time">12:00 PM</div>
+                        <div class="slot-info">Available</div>
+                    </div>
+                    <div class="time-slot available">
+                        <div class="time">1:30 PM</div>
+                        <div class="slot-info">Available</div>
+                    </div>
+                    <div class="time-slot booked">
+                        <div class="time">3:00 PM</div>
+                        <div class="slot-info">Robert Davis</div>
+                    </div>
+                    <div class="time-slot booked">
+                        <div class="time">4:30 PM</div>
+                        <div class="slot-info">Mia Thompson</div>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <div class="login-section">
-            <div class="login-header">
-                <h2>Owner Login</h2>
-                <p>Access your salon management dashboard</p>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal" id="confirmationModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Confirm Appointment</h2>
+                <button class="close-modal">&times;</button>
             </div>
-            
-            <form id="salonLoginForm">
-                <div class="form-group">
-                    <label for="salonName">Salon Name</label>
-                    <div class="input-with-icon">
-                        <i class="fas fa-store"></i>
-                        <input type="text" id="salonName" required placeholder="Enter your salon name">
-                    </div>
+            <div class="modal-body">
+                <p>Are you sure you want to confirm this appointment?</p>
+                <div id="appointmentDetails" style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+                    <p><strong>Customer:</strong> <span id="modalCustomer">James Wilson</span></p>
+                    <p><strong>Service:</strong> <span id="modalService">Beard Trim</span></p>
+                    <p><strong>Stylist:</strong> <span id="modalStylist">Michael</span></p>
+                    <p><strong>Date & Time:</strong> <span id="modalDateTime">May 15, 2023 at 2:30 PM</span></p>
                 </div>
+            </div>
+            <div class="modal-footer">
+                <button class="action-btn btn-cancel" id="modalCancelBtn">Cancel</button>
+                <button class="action-btn btn-confirm" id="modalConfirmBtn">Yes, Confirm</button>
+            </div>
+        </div>
+    </div>
 
-                <div class="form-group">
-                    <label for="ownerEmail">Owner Email</label>
-                    <div class="input-with-icon">
-                        <i class="fas fa-envelope"></i>
-                        <input type="email" id="ownerEmail" required placeholder="Enter your email">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <div class="input-with-icon">
-                        <i class="fas fa-lock"></i>
-                        <input type="password" id="password" required placeholder="Enter your password">
-                        <span class="password-toggle" id="passwordToggle">
-                            <i class="far fa-eye"></i>
-                        </span>
+    <!-- Stylists Modal -->
+    <div class="modal" id="stylistsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Manage Stylists</h2>
+                <button class="close-modal" id="closeStylistsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom:20px;">
+                    <h3>Add New Stylist</h3>
+                    <div style="display:flex; gap:10px; margin-top:10px;">
+                        <input type="text" id="newStylistName" placeholder="Enter stylist name" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                        <button id="addStylistBtn" class="action-btn btn-confirm">Add Stylist</button>
                     </div>
                 </div>
                 
-                <div class="remember-forgot">
-                    <div class="remember">
-                        <input type="checkbox" id="rememberMe">
-                        <label for="rememberMe">Remember me</label>
+                <div>
+                    <h3>Current Stylists</h3>
+                    <div id="stylistsList" style="margin-top:15px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid #f0f0f0;">
+                            <div>Sophia</div>
+                            <button class="action-btn btn-cancel">Remove</button>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid #f0f0f0;">
+                            <div>Michael</div>
+                            <button class="action-btn btn-cancel">Remove</button>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px;">
+                            <div>Jessica</div>
+                            <button class="action-btn btn-cancel">Remove</button>
+                        </div>
                     </div>
-                    <a href="#" class="forgot-password">Forgot Password?</a>
                 </div>
-
-                <button type="submit" class="btn-login">Access Dashboard</button>
-
-                <div class="register-link">
-                    Don't have an account? <a href="../views/Salon Registration.html">Register your salon</a>
-                </div>
-            </form>
-
-            <div class="success-message" id="successMessage">
-                <i class="fas fa-check-circle"></i>
-                <div class="success-content">
-                    <h3>Login Successful!</h3>
-                    <p>Redirecting to your dashboard...</p>
-                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="action-btn btn-cancel" id="closeStylistsBtn">Close</button>
             </div>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const loginForm = document.getElementById('salonLoginForm');
-            const successMessage = document.getElementById('successMessage');
-            const passwordToggle = document.getElementById('passwordToggle');
-            const passwordInput = document.getElementById('password');
+            // Set current date
+            const now = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', options);
             
-            // Toggle password visibility
-            passwordToggle.addEventListener('click', function() {
-                if (passwordInput.type === 'password') {
-                    passwordInput.type = 'text';
-                    passwordToggle.innerHTML = '<i class="far fa-eye-slash"></i>';
-                } else {
-                    passwordInput.type = 'password';
-                    passwordToggle.innerHTML = '<i class="far fa-eye"></i>';
+            // Modal functionality
+            const confirmationModal = document.getElementById('confirmationModal');
+            const stylistsModal = document.getElementById('stylistsModal');
+            const closeModalButtons = document.querySelectorAll('.close-modal, .btn-cancel');
+            
+            // Open modals
+            document.querySelectorAll('.btn-confirm').forEach(button => {
+                if (!button.closest('.modal')) {
+                    button.addEventListener('click', function() {
+                        confirmationModal.style.display = 'flex';
+                    });
                 }
             });
             
-            // Form submission
-            loginForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                // Simple validation
-                const salonName = document.getElementById('salonName').value;
-                const email = document.getElementById('ownerEmail').value;
-                const password = document.getElementById('password').value;
-                
-                if (salonName && email && password) {
-                    // Show success message
-                    successMessage.style.display = 'flex';
-                    loginForm.style.display = 'none';
+            document.getElementById('menuStylists').addEventListener('click', function() {
+                stylistsModal.style.display = 'flex';
+            });
+            
+            // Close modals
+            closeModalButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    confirmationModal.style.display = 'none';
+                    stylistsModal.style.display = 'none';
+                });
+            });
+            
+            // Add stylist functionality
+            document.getElementById('addStylistBtn').addEventListener('click', function() {
+                const newStylistName = document.getElementById('newStylistName').value;
+                if (newStylistName.trim() !== '') {
+                    const stylistsList = document.getElementById('stylistsList');
+                    const newStylist = document.createElement('div');
+                    newStylist.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid #f0f0f0;">
+                            <div>${newStylistName}</div>
+                            <button class="action-btn btn-cancel">Remove</button>
+                        </div>
+                    `;
+                    stylistsList.appendChild(newStylist);
+                    document.getElementById('newStylistName').value = '';
                     
-                    // Simulate redirect
-                    setTimeout(function() {
-                        alert('Redirecting to dashboard (simulated action)');
-                    }, 2000);
+                    // Add remove functionality to the new button
+                    newStylist.querySelector('.btn-cancel').addEventListener('click', function() {
+                        stylistsList.removeChild(newStylist);
+                    });
+                }
+            });
+            
+            // Add remove functionality to existing remove buttons
+            document.querySelectorAll('#stylistsList .btn-cancel').forEach(button => {
+                button.addEventListener('click', function() {
+                    const stylistItem = this.closest('div');
+                    stylistItem.parentNode.removeChild(stylistItem);
+                });
+            });
+            
+            // Close modal if clicked outside
+            window.addEventListener('click', function(event) {
+                if (event.target === confirmationModal) {
+                    confirmationModal.style.display = 'none';
+                }
+                if (event.target === stylistsModal) {
+                    stylistsModal.style.display = 'none';
                 }
             });
         });
