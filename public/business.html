@@ -916,78 +916,303 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Set current date
-            const now = new Date();
-            const options = { year: 'numeric', month: 'long', day: 'numeric' };
-            document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', options);
-            
-            // Modal functionality
-            const confirmationModal = document.getElementById('confirmationModal');
-            const stylistsModal = document.getElementById('stylistsModal');
-            const closeModalButtons = document.querySelectorAll('.close-modal, .btn-cancel');
-            
-            // Open modals
-            document.querySelectorAll('.btn-confirm').forEach(button => {
-                if (!button.closest('.modal')) {
-                    button.addEventListener('click', function() {
-                        confirmationModal.style.display = 'flex';
-                    });
-                }
-            });
-            
-            document.getElementById('menuStylists').addEventListener('click', function() {
-                stylistsModal.style.display = 'flex';
-            });
-            
-            // Close modals
-            closeModalButtons.forEach(button => {
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check if business user is logged in
+        const businessUser = localStorage.getItem('businessUser');
+        const userType = localStorage.getItem('userType');
+        
+        if (!businessUser || userType !== 'business') {
+            alert('Please login first');
+            window.location.href = 'customer.html?type=business';
+            return;
+        }
+
+        const user = JSON.parse(businessUser);
+        const urlParams = new URLSearchParams(window.location.search);
+        const businessId = urlParams.get('id');
+        
+        // Verify the logged-in business owns this dashboard
+        if (user.id !== businessId) {
+            alert('Access denied');
+            window.location.href = 'customer.html?type=business';
+            return;
+        }
+
+        currentBusinessId = businessId;
+        
+        // Initialize dashboard with business data
+        initializeDashboard(user);
+        loadBusinessData();
+        loadAppointments();
+
+        // Set current date
+        const now = new Date();
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', options);
+        
+        // Modal functionality
+        const confirmationModal = document.getElementById('confirmationModal');
+        const stylistsModal = document.getElementById('stylistsModal');
+        const closeModalButtons = document.querySelectorAll('.close-modal, .btn-cancel');
+        
+        // Open modals
+        document.querySelectorAll('.btn-confirm').forEach(button => {
+            if (!button.closest('.modal')) {
                 button.addEventListener('click', function() {
-                    confirmationModal.style.display = 'none';
-                    stylistsModal.style.display = 'none';
+                    // Get appointment data from the row
+                    const row = this.closest('tr');
+                    if (row) {
+                        const customerName = row.querySelector('.customer-cell div:last-child').textContent;
+                        const service = row.cells[1].textContent;
+                        const stylist = row.cells[2].textContent;
+                        const dateTime = row.cells[3].textContent;
+                        
+                        document.getElementById('modalCustomer').textContent = customerName;
+                        document.getElementById('modalService').textContent = service;
+                        document.getElementById('modalStylist').textContent = stylist;
+                        document.getElementById('modalDateTime').textContent = dateTime;
+                    }
+                    confirmationModal.style.display = 'flex';
                 });
-            });
-            
-            // Add stylist functionality
-            document.getElementById('addStylistBtn').addEventListener('click', function() {
-                const newStylistName = document.getElementById('newStylistName').value;
-                if (newStylistName.trim() !== '') {
-                    const stylistsList = document.getElementById('stylistsList');
-                    const newStylist = document.createElement('div');
-                    newStylist.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid #f0f0f0;">
-                            <div>${newStylistName}</div>
-                            <button class="action-btn btn-cancel">Remove</button>
-                        </div>
-                    `;
-                    stylistsList.appendChild(newStylist);
-                    document.getElementById('newStylistName').value = '';
-                    
-                    // Add remove functionality to the new button
-                    newStylist.querySelector('.btn-cancel').addEventListener('click', function() {
-                        stylistsList.removeChild(newStylist);
-                    });
-                }
-            });
-            
-            // Add remove functionality to existing remove buttons
-            document.querySelectorAll('#stylistsList .btn-cancel').forEach(button => {
-                button.addEventListener('click', function() {
-                    const stylistItem = this.closest('div');
-                    stylistItem.parentNode.removeChild(stylistItem);
-                });
-            });
-            
-            // Close modal if clicked outside
-            window.addEventListener('click', function(event) {
-                if (event.target === confirmationModal) {
-                    confirmationModal.style.display = 'none';
-                }
-                if (event.target === stylistsModal) {
-                    stylistsModal.style.display = 'none';
-                }
+            }
+        });
+        
+        document.getElementById('menuStylists').addEventListener('click', function() {
+            stylistsModal.style.display = 'flex';
+        });
+        
+        // Close modals
+        closeModalButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                confirmationModal.style.display = 'none';
+                stylistsModal.style.display = 'none';
             });
         });
-    </script>
+        
+        // Add stylist functionality
+        document.getElementById('addStylistBtn').addEventListener('click', function() {
+            const newStylistName = document.getElementById('newStylistName').value;
+            if (newStylistName.trim() !== '') {
+                const stylistsList = document.getElementById('stylistsList');
+                const newStylist = document.createElement('div');
+                newStylist.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid #f0f0f0;">
+                        <div>${newStylistName}</div>
+                        <button class="action-btn btn-cancel">Remove</button>
+                    </div>
+                `;
+                stylistsList.appendChild(newStylist);
+                document.getElementById('newStylistName').value = '';
+                
+                // Add remove functionality to the new button
+                newStylist.querySelector('.btn-cancel').addEventListener('click', function() {
+                    stylistsList.removeChild(newStylist);
+                });
+            }
+        });
+        
+        // Add remove functionality to existing remove buttons
+        document.querySelectorAll('#stylistsList .btn-cancel').forEach(button => {
+            button.addEventListener('click', function() {
+                const stylistItem = this.closest('div');
+                stylistItem.parentNode.removeChild(stylistItem);
+            });
+        });
+        
+        // Close modal if clicked outside
+        window.addEventListener('click', function(event) {
+            if (event.target === confirmationModal) {
+                confirmationModal.style.display = 'none';
+            }
+            if (event.target === stylistsModal) {
+                stylistsModal.style.display = 'none';
+            }
+        });
+
+        // Logout functionality
+        document.querySelector('.logout-btn').addEventListener('click', function() {
+            localStorage.removeItem('businessUser');
+            localStorage.removeItem('userType');
+            window.location.href = 'customer.html?type=business';
+        });
+
+        // Filter functionality
+        document.getElementById('datePicker').addEventListener('change', loadAppointments);
+        document.getElementById('stylistFilter').addEventListener('change', loadAppointments);
+        document.getElementById('statusFilter').addEventListener('change', loadAppointments);
+    });
+
+    function initializeDashboard(businessUser) {
+        // Set business name in sidebar and dashboard
+        document.getElementById('sidebarSalonName').textContent = businessUser.name;
+        document.getElementById('dashboardTitle').textContent = businessUser.name + " Dashboard";
+        document.getElementById('dashboardOwnerName').textContent = businessUser.name.split(' ')[0] || 'Owner';
+    }
+
+    async function loadBusinessData() {
+        try {
+            const response = await fetch(`/api/business?id=${currentBusinessId}`);
+            const result = await response.json();
+            
+            if (response.ok) {
+                // Update any additional business data if needed
+                console.log('Business data loaded:', result.business);
+            } else {
+                console.error('Error loading business data:', result.error);
+            }
+        } catch (error) {
+            console.error('Error loading business data:', error);
+        }
+    }
+
+    async function loadAppointments() {
+        try {
+            // Get filter values
+            const dateFilter = document.getElementById('datePicker').value;
+            const stylistFilter = document.getElementById('stylistFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            
+            let url = `/api/appointments?businessId=${currentBusinessId}`;
+            
+            // Add filters to URL
+            const params = new URLSearchParams();
+            if (dateFilter) params.append('date', dateFilter);
+            if (stylistFilter !== 'all') params.append('stylist', stylistFilter);
+            if (statusFilter !== 'all') params.append('status', statusFilter);
+            
+            if (params.toString()) {
+                url += '&' + params.toString();
+            }
+            
+            const response = await fetch(url);
+            const result = await response.json();
+            
+            if (response.ok) {
+                displayAppointments(result.appointments || []);
+                updateStats(result.appointments || []);
+            } else {
+                console.error('Error loading appointments:', result.error);
+            }
+        } catch (error) {
+            console.error('Error loading appointments:', error);
+        }
+    }
+
+    function displayAppointments(appointments) {
+        const tbody = document.getElementById('appointmentsTbody');
+        if (!tbody) return;
+        
+        tbody.innerHTML = '';
+        
+        if (appointments.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No appointments found</td></tr>';
+            return;
+        }
+        
+        appointments.forEach(appointment => {
+            const row = document.createElement('tr');
+            const appointmentDate = new Date(appointment.appointment_date);
+            const formattedDate = appointmentDate.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            }) + ' at ' + appointmentDate.toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            
+            // Get first letter of customer name for avatar
+            const customerName = appointment.users ? appointment.users.name : 'N/A';
+            const avatarLetter = customerName.charAt(0).toUpperCase();
+            
+            row.innerHTML = `
+                <td>
+                    <div class="customer-cell">
+                        <div class="customer-avatar">${avatarLetter}</div>
+                        <div>${customerName}</div>
+                    </div>
+                </td>
+                <td>${appointment.service}</td>
+                <td>${appointment.stylist || 'Not assigned'}</td>
+                <td>${formattedDate}</td>
+                <td>${appointment.users ? appointment.users.phone : 'N/A'}</td>
+                <td>
+                    <span class="status-badge status-${appointment.status}">
+                        ${appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                    </span>
+                </td>
+                <td>
+                    ${appointment.status === 'pending' ? 
+                        `<button class="action-btn btn-confirm">Confirm</button>` : ''}
+                    <button class="action-btn btn-cancel">Cancel</button>
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+
+        // Re-attach event listeners to confirm buttons
+        document.querySelectorAll('.btn-confirm').forEach(button => {
+            button.addEventListener('click', function() {
+                const row = this.closest('tr');
+                const customerName = row.querySelector('.customer-cell div:last-child').textContent;
+                const service = row.cells[1].textContent;
+                const stylist = row.cells[2].textContent;
+                const dateTime = row.cells[3].textContent;
+                
+                document.getElementById('modalCustomer').textContent = customerName;
+                document.getElementById('modalService').textContent = service;
+                document.getElementById('modalStylist').textContent = stylist;
+                document.getElementById('modalDateTime').textContent = dateTime;
+                
+                document.getElementById('confirmationModal').style.display = 'flex';
+            });
+        });
+    }
+
+    function updateStats(appointments) {
+        const today = new Date().toDateString();
+        const todayAppointments = appointments.filter(apt => 
+            new Date(apt.appointment_date).toDateString() === today
+        );
+        
+        const pendingAppointments = appointments.filter(apt => 
+            apt.status === 'pending'
+        );
+        
+        document.getElementById('todaysAppointmentsCount').textContent = todayAppointments.length;
+        document.getElementById('pendingAppointmentsCount').textContent = pendingAppointments.length;
+        
+        // Update appointment badge in sidebar
+        document.getElementById('appointmentBadge').textContent = pendingAppointments.length;
+    }
+
+    // Handle appointment confirmation
+    document.getElementById('modalConfirmBtn')?.addEventListener('click', async function() {
+        try {
+            // In a real implementation, you would send the appointment ID to update the status
+            const response = await fetch('/api/appointments', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    id: 'appointment-id', // You would get this from the row data
+                    status: 'confirmed' 
+                })
+            });
+            
+            if (response.ok) {
+                document.getElementById('confirmationModal').style.display = 'none';
+                loadAppointments(); // Refresh the appointments
+            } else {
+                alert('Error confirming appointment');
+            }
+        } catch (error) {
+            console.error('Error confirming appointment:', error);
+            alert('Error confirming appointment');
+        }
+    });
+</script>
 </body>
 </html>

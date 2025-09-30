@@ -438,7 +438,29 @@ async function handleCustomerLogin() {
         submitBtn.disabled = false;
     }
 }
-
+// Add this function to script.js
+function handleBusinessLoginRedirect() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const loginType = urlParams.get('type');
+    
+    if (loginType === 'business') {
+        // Show business login tab
+        const businessTab = document.querySelector('[data-tab="business"]');
+        if (businessTab) {
+            businessTab.click();
+        }
+        
+        // Check if business user is already logged in
+        const businessUser = localStorage.getItem('businessUser');
+        const userType = localStorage.getItem('userType');
+        
+        if (businessUser && userType === 'business') {
+            const user = JSON.parse(businessUser);
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('businessRedirect').classList.remove('hidden');
+        }
+    }
+}
 async function handleCustomerRegistration() {
     const registerForm = document.getElementById('customerRegisterForm');
     const submitBtn = registerForm.querySelector('button[type="submit"]');
@@ -531,6 +553,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Initializing business registration');
         initBusinessAuthentication();
         initBusinessRegistration();
+        handleBusinessLoginRedirect(); 
     }
     
     // Customer Booking Page
