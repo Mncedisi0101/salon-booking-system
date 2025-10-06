@@ -121,46 +121,90 @@ input:focus, select:focus, textarea:focus {
     background-color: #e5e7eb;
 }
 
+/* Services Offered Section */
+.form-group > label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    color: #333; /* Darker text for better readability */
+}
+
 .services-container {
-    margin-bottom: 10px;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
 }
 
 .service-input {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 10px;
-    align-items: center;
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Two columns layout */
+    grid-gap: 1rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.service-input input {
-    flex: 1;
+.service-input > * { /* Style all direct children */
+    margin-bottom: 0.5rem; /* Add spacing between elements */
+}
+
+.service-input > *:last-child { /* Remove margin from last element in service-input */
+    margin-bottom: 0;
+}
+
+.service-name,
+.service-description,
+.service-price,
+.service-duration {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-family: sans-serif; /* Consistent font */
+}
+
+.service-description {
+    resize: vertical; /* Allow vertical resizing */
+    min-height: 50px;
 }
 
 .remove-service {
-    background-color: var(--error-color);
+    background-color: #e74c3c; /* Red color */
     color: white;
     border: none;
-    padding: 5px 10px;
-    border-radius: 3px;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
     cursor: pointer;
+    transition: background-color 0.3s ease;
+    width: auto; /* Adjust width */
+    justify-self: start; /* Align to the start of the grid cell */
 }
-.service-input textarea {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 5px;
+
+.remove-service:hover {
+    background-color: #c0392b; /* Darker red on hover */
+}
+
+#addService {
+    background-color: #3498db; /* Blue color */
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
     font-size: 1rem;
-    resize: vertical;
-    min-height: 60px;
+    display: block; /* Make it a block-level element */
+    margin-top: 1rem; /* Add some space above the button */
 }
 
-.service-input textarea:focus {
-    outline: none;
-    border-color: var(--primary-color);
-}
-
-.hidden {
-    display: none;
+#addService:hover {
+    background-color: #2980b9; /* Darker blue on hover */
 }
 /* Authentication Styles */
 .auth-switch {
@@ -391,13 +435,6 @@ input:focus, select:focus, textarea:focus {
         grid-template-columns: 1fr;
     }
     .service-input {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-    
-    .service-input input,
-    .service-input textarea {
-        width: 100%;
+        grid-template-columns: 1fr; /* Stack on smaller screens */
     }
 }
