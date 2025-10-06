@@ -482,6 +482,16 @@ async function handleCustomerRegistration() {
             alert('Password must be at least 6 characters long');
             return;
         }
+
+        // Ensure we have a businessId
+        if (!currentBusinessId) {
+            const urlParams = new URLSearchParams(window.location.search);
+            currentBusinessId = urlParams.get('business');
+        }
+        if (!currentBusinessId) {
+            alert('Invalid booking link. Please use the salon’s booking URL with a business parameter.');
+            return;
+        }
         
         const registerData = {
             type: 'customer_register',
@@ -501,7 +511,24 @@ async function handleCustomerRegistration() {
         });
         
         if (!response.ok) {
-            throw new Error(`Registration failed: ${response.status}`);
+            let message = `Registration failed: ${response.status}`;
+            try {
+                const maybeJson = await response.json();
+                if (maybeJson && maybeJson.error) message = maybeJson.error;
+            } catch (_) {
+                try {
+                    const text = await response.text();
+                    if (text) message = text;
+                } catch (_) {}
+            }
+            // Friendlier messages for common cases
+            if (/Business ID is required/i.test(message)) {
+                message = 'Missing business ID. Open the booking link from the salon QR/URL (it includes ?business=...).';
+            }
+            if (/duplicate|already exists|unique/i.test(message)) {
+                message = 'An account with this email already exists for this salon. Please login instead.';
+            }
+            throw new Error(message);
         }
         
         const result = await response.json();
