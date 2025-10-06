@@ -144,6 +144,20 @@ input:focus, select:focus, textarea:focus {
     border-radius: 3px;
     cursor: pointer;
 }
+.service-input textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    font-size: 1rem;
+    resize: vertical;
+    min-height: 60px;
+}
+
+.service-input textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
 
 .hidden {
     display: none;
@@ -375,5 +389,15 @@ input:focus, select:focus, textarea:focus {
     
     .stats-container {
         grid-template-columns: 1fr;
+    }
+    .service-input {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .service-input input,
+    .service-input textarea {
+        width: 100%;
     }
 }

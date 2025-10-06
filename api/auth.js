@@ -25,33 +25,51 @@ module.exports = async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
         
-        const { data, error } = await supabase
+        // Insert business without services
+        const { data: businessData, error: businessError } = await supabase
           .from('businesses')
           .insert([{ 
             name, 
             email, 
             phone, 
             password: hashedPassword,
-            address: address,
-            services: services 
+            address: address
           }])
           .select();
         
-        if (error) {
-          console.error('Business registration error:', error);
-          return res.status(400).json({ error: error.message });
+        if (businessError) {
+          console.error('Business registration error:', businessError);
+          return res.status(400).json({ error: businessError.message });
         }
         
-        if (!data || data.length === 0) {
+        if (!businessData || businessData.length === 0) {
           return res.status(400).json({ error: 'Failed to create business account' });
+        }
+
+        const business = businessData[0];
+
+        // Create services in the services table
+        if (services && services.length > 0) {
+          const servicePromises = services.map(service => 
+            supabase
+              .from('services')
+              .insert([{
+                business_id: business.id,
+                name: service.name,
+                description: service.description || '',
+                price: service.price,
+                duration: service.duration
+              }])
+          );
+
+          await Promise.all(servicePromises);
         }
         
         return res.status(200).json({ 
-          business: data[0], 
+          business: business, 
           success: true,
           type: 'business'
         });
-
       } else if (type === 'business_login') {
         // Business Login
         if (!email || !password) {

@@ -10,19 +10,62 @@ module.exports = async (req, res) => {
   }
 
   if (req.method === 'POST') {
-    // Create a new appointment
-    const { businessId, userId, service, appointmentDate, notes } = req.body;
-    
-    const { data, error } = await supabase
-      .from('appointments')
-      .insert([{ business_id: businessId, user_id: userId, service, appointment_date: appointmentDate, notes }])
-      .select();
-    
-    if (error) {
-      return res.status(400).json({ error: error.message });
+    try {
+      // Create a new appointment
+      const { businessId, userId, serviceId, appointmentDate, notes } = req.body;
+      
+      // First, create or get the user
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .upsert({
+          business_id: businessId,
+          name: userId.name,
+          email: userId.email,
+          phone: userId.phone
+        }, { onConflict: 'email,business_id' })
+        .select()
+        .single();
+      
+      if (userError) {
+        return res.status(400).json({ error: userError.message });
+      }
+      
+      // Get service details
+      const { data: serviceData, error: serviceError } = await supabase
+        .from('services')
+        .select('name, price, duration')
+        .eq('id', serviceId)
+        .single();
+      
+      if (serviceError) {
+        return res.status(400).json({ error: 'Invalid service selected' });
+      }
+      
+      // Then create the appointment
+      const { data, error } = await supabase
+        .from('appointments')
+        .insert([{ 
+          business_id: businessId, 
+          user_id: userData.id, 
+          service_id: serviceId,
+          service: serviceData.name, // Keep for backward compatibility
+          appointment_date: appointmentDate, 
+          notes 
+        }])
+        .select(`
+          *,
+          users (name, email, phone),
+          services (name, description, price, duration)
+        `);
+      
+      if (error) {
+        return res.status(400).json({ error: error.message });
+      }
+      
+      return res.status(200).json({ appointment: data[0] });
+    } catch (error) {
+      return res.status(500).json({ error: 'Internal server error' });
     }
-    
-    return res.status(200).json({ appointment: data[0] });
   }
 
   if (req.method === 'GET') {

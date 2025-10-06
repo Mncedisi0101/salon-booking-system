@@ -58,11 +58,12 @@ async function handleBusinessRegistration() {
         
         serviceInputs.forEach(input => {
             const name = input.querySelector('.service-name').value;
+            const description = input.querySelector('.service-description').value;
             const price = parseFloat(input.querySelector('.service-price').value);
             const duration = parseInt(input.querySelector('.service-duration').value);
             
             if (name && !isNaN(price) && !isNaN(duration)) {
-                services.push({ name, price, duration });
+                services.push({ name, description, price, duration });
             }
         });
         
@@ -533,14 +534,95 @@ function showBookingForm(user) {
     // Load services for booking
     loadServicesForBooking();
 }
+// Service Management Functions
+async function loadBusinessServices(businessId) {
+    try {
+        const response = await fetch(`/api/services?businessId=${businessId}`);
+        const result = await response.json();
+        
+        if (response.ok) {
+            return result.services || [];
+        } else {
+            console.error('Error loading services:', result.error);
+            return [];
+        }
+    } catch (error) {
+        console.error('Error loading services:', error);
+        return [];
+    }
+}
 
-function loadServicesForBooking() {
-    // This should load services from the actual business data
-    // For now, using placeholder
-    const serviceSelect = document.getElementById('service');
-    if (serviceSelect) {
-        serviceSelect.innerHTML = '<option value="">Choose a service</option>';
-        // Add service options here based on business services
+async function createService(serviceData) {
+    try {
+        const response = await fetch('/api/services', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(serviceData)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            return result.service;
+        } else {
+            throw new Error(result.error || 'Failed to create service');
+        }
+    } catch (error) {
+        console.error('Error creating service:', error);
+        throw error;
+    }
+}
+// Function for loading services into booking form
+async function loadServicesForBooking() {
+    if (!currentBusinessId) {
+        console.error('No business ID available');
+        return;
+    }
+
+    try {
+        const services = await loadBusinessServices(currentBusinessId);
+        const serviceSelect = document.getElementById('service');
+        
+        if (serviceSelect) {
+            serviceSelect.innerHTML = '<option value="">Choose a service</option>';
+            
+            services.forEach(service => {
+                const option = document.createElement('option');
+                option.value = service.id;
+                option.textContent = `${service.name} - R${service.price} (${service.duration} min)`;
+                option.setAttribute('data-price', service.price);
+                option.setAttribute('data-duration', service.duration);
+                serviceSelect.appendChild(option);
+            });
+            
+            businessServices = services;
+        }
+    } catch (error) {
+        console.error('Error loading services for booking:', error);
+    }
+}
+async function handleAppointmentBooking(appointmentData) {
+    try {
+        const response = await fetch('/api/appointments', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(appointmentData)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            return result.appointment;
+        } else {
+            throw new Error(result.error || 'Failed to book appointment');
+        }
+    } catch (error) {
+        console.error('Error booking appointment:', error);
+        throw error;
     }
 }
 
