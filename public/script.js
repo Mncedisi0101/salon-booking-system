@@ -533,6 +533,43 @@ function showBookingForm(user) {
     
     // Load services for booking
     loadServicesForBooking();
+
+    // Wire up appointment booking submission
+    const appointmentForm = document.getElementById('appointmentForm');
+    if (appointmentForm) {
+        appointmentForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            try {
+                const serviceSelect = document.getElementById('service');
+                const serviceId = serviceSelect ? serviceSelect.value : '';
+                const appointmentDate = document.getElementById('appointmentDate').value;
+                const notes = document.getElementById('notes').value;
+
+                if (!serviceId) {
+                    alert('Please select a service');
+                    return;
+                }
+
+                const appointmentData = {
+                    businessId: currentBusinessId,
+                    userId: currentUserId, // backend will accept scalar id
+                    serviceId: serviceId,
+                    appointmentDate: appointmentDate,
+                    notes: notes
+                };
+
+                const appointment = await handleAppointmentBooking(appointmentData);
+
+                if (appointment) {
+                    document.getElementById('bookingSection').classList.add('hidden');
+                    document.getElementById('confirmationMessage').classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error('Booking failed:', err);
+                alert('Error booking appointment: ' + err.message);
+            }
+        });
+    }
 }
 // Service Management Functions
 async function loadBusinessServices(businessId) {
@@ -657,7 +694,7 @@ async function loadServicesForBooking() {
         const modal = document.getElementById('serviceModal');
         const modalTitle = document.getElementById('serviceModalTitle');
         const form = document.getElementById('serviceForm');
-        const editingServiceId = document.getElementById('editingServiceId');
+        const editingServiceIdEl = document.getElementById('editingServiceId');
 
         if (service) {
             // Editing existing service
@@ -666,20 +703,27 @@ async function loadServicesForBooking() {
             document.getElementById('serviceDescription').value = service.description || '';
             document.getElementById('servicePrice').value = service.price;
             document.getElementById('serviceDuration').value = service.duration;
-            editingServiceId.value = service.id;
+            if (editingServiceIdEl) editingServiceIdEl.value = service.id;
         } else {
             // Adding new service
             modalTitle.textContent = 'Add New Service';
             form.reset();
-            editingServiceId.value = '';
+            if (editingServiceIdEl) editingServiceIdEl.value = '';
         }
 
-        modal.classList.remove('hidden');
+        // Show modal
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+        }
     }
 
     function closeServiceModal() {
         const modal = document.getElementById('serviceModal');
-        modal.classList.add('hidden');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+        }
     }
 
     async function handleServiceFormSubmit() {
@@ -699,7 +743,8 @@ async function loadServicesForBooking() {
                 duration: parseInt(document.getElementById('serviceDuration').value)
             };
 
-            const editingServiceId = document.getElementById('editingServiceId').value;
+            const editingServiceIdEl = document.getElementById('editingServiceId');
+            const editingServiceId = editingServiceIdEl ? editingServiceIdEl.value : '';
             let result;
 
             if (editingServiceId) {
@@ -870,11 +915,11 @@ async function loadServicesForBooking() {
         `;
         
         if (type === 'success') {
-            notification.style.backgroundColor = 'var(--success-color)';
+            notification.style.backgroundColor = '#4caf50';
         } else if (type === 'error') {
-            notification.style.backgroundColor = 'var(--error-color)';
+            notification.style.backgroundColor = '#f44336';
         } else {
-            notification.style.backgroundColor = 'var(--warning-color)';
+            notification.style.backgroundColor = '#ff9800';
         }
         
         document.body.appendChild(notification);
@@ -1020,9 +1065,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Verify the logged-in business owns this dashboard
             if (user.id === businessId) {
                 currentBusinessId = businessId;
+                initializeDashboard(user);
                 loadBusinessData();
                 loadAppointments();
-                 loadServices(); // Load services when dashboard loads
+                loadServices(); // Load services when dashboard loads
+                initServiceManagement(); // Initialize service management UI
             } else {
                 alert('Access denied');
                 window.location.href = 'customer.html?type=business';
@@ -1127,30 +1174,72 @@ function loadBusinessInfo() {
     document.getElementById('businessTitle').textContent = "Salon Booking";
 }
 
-function loadServices() {
-    const services = [
-        { name: "Haircut", price: 30, duration: 30 },
-        { name: "Hair Color", price: 80, duration: 120 },
-        { name: "Manicure", price: 25, duration: 45 },
-        { name: "Pedicure", price: 35, duration: 60 }
-    ];
-    
-    const serviceSelect = document.getElementById('service');
-    if (serviceSelect) {
-        serviceSelect.innerHTML = '<option value="">Choose a service</option>';
-        
-        services.forEach(service => {
-            const option = document.createElement('option');
-            option.value = service.name;
-            option.textContent = `${service.name} - $${service.price} (${service.duration} min)`;
-            serviceSelect.appendChild(option);
+
+// Business Dashboard Functions
+function initializeDashboard(businessUser) {
+    const sidebarName = document.getElementById('sidebarSalonName');
+    if (sidebarName) sidebarName.textContent = businessUser.name;
+    const title = document.getElementById('dashboardTitle');
+    if (title) title.textContent = businessUser.name + ' Dashboard';
+    const owner = document.getElementById('dashboardOwnerName');
+    if (owner) owner.textContent = (businessUser.name || '').split(' ')[0] || 'Owner';
+}
+function initStylistsModal() {
+    const stylistsModal = document.getElementById('stylistsModal');
+    const openBtn = document.getElementById('menuStylists');
+    const closeX = document.getElementById('closeStylistsModal');
+    const closeBtn = document.getElementById('closeStylistsBtn');
+    const addBtn = document.getElementById('addStylistBtn');
+    const nameInput = document.getElementById('newStylistName');
+    const list = document.getElementById('stylistsList');
+
+    if (openBtn && stylistsModal) {
+        openBtn.addEventListener('click', () => {
+            stylistsModal.style.display = 'flex';
         });
-        
-        businessServices = services;
+    }
+
+    [closeX, closeBtn].forEach(btn => {
+        if (btn && stylistsModal) {
+            btn.addEventListener('click', () => {
+                stylistsModal.style.display = 'none';
+            });
+        }
+    });
+
+    window.addEventListener('click', function(event) {
+        if (event.target === stylistsModal) {
+            stylistsModal.style.display = 'none';
+        }
+    });
+
+    if (addBtn && list && nameInput) {
+        addBtn.addEventListener('click', function() {
+            const val = nameInput.value.trim();
+            if (!val) return;
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid #f0f0f0;';
+            wrapper.innerHTML = `<div>${val}</div><button class="action-btn btn-cancel">Remove</button>`;
+            list.appendChild(wrapper);
+            nameInput.value = '';
+            const removeBtn = wrapper.querySelector('.btn-cancel');
+            removeBtn.addEventListener('click', function() {
+                if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
+            });
+        });
+    }
+
+    // Attach remove to existing buttons
+    if (list) {
+        list.querySelectorAll('.btn-cancel').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const item = this.closest('div');
+                if (item && item.parentNode) item.parentNode.removeChild(item);
+            });
+        });
     }
 }
 
-// Business Dashboard Functions
 function initBusinessDashboard() {
     const refreshBtn = document.getElementById('refreshBtn');
     const qrBtn = document.getElementById('qrBtn');
@@ -1169,7 +1258,73 @@ function initBusinessDashboard() {
     // Load business data
     loadBusinessData();
     loadAppointments();
+
+    // Set current date display
+    const currentDateEl = document.getElementById('currentDate');
+    if (currentDateEl) {
+        const now = new Date();
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        currentDateEl.textContent = now.toLocaleDateString('en-US', options);
+    }
+
+    // Initialize Stylists modal handlers
+    initStylistsModal();
+
+    // Logout
+    const logoutEl = document.querySelector('.logout-btn');
+    if (logoutEl) {
+        logoutEl.addEventListener('click', function() {
+            localStorage.removeItem('businessUser');
+            localStorage.removeItem('userType');
+            window.location.href = 'customer.html?type=business';
+        });
+    }
+
+    // Filters
+    const datePicker = document.getElementById('datePicker');
+    const stylistFilter = document.getElementById('stylistFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    [datePicker, stylistFilter, statusFilter].forEach(el => {
+        if (el) el.addEventListener('change', () => loadAppointments());
+    });
+
+    // Confirmation modal handler
+    const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+    const confirmationModal = document.getElementById('confirmationModal');
+    if (modalConfirmBtn && confirmationModal) {
+        modalConfirmBtn.addEventListener('click', async function() {
+            const aptId = confirmationModal.dataset.appointmentId;
+            if (!aptId) {
+                confirmationModal.style.display = 'none';
+                return;
+            }
+            try {
+                const resp = await fetch('/api/appointments', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: aptId, status: 'confirmed' })
+                });
+                if (resp.ok) {
+                    confirmationModal.style.display = 'none';
+                    loadAppointments();
+                } else {
+                    alert('Error confirming appointment');
+                }
+            } catch (e) {
+                console.error('Confirm error', e);
+            }
+        });
+    }
     
+    // Close modals by clicking X
+    document.querySelectorAll('.close-modal').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (confirmationModal) confirmationModal.style.display = 'none';
+            const stylistsModal = document.getElementById('stylistsModal');
+            if (stylistsModal) stylistsModal.style.display = 'none';
+        });
+    });
+
     // Refresh button
     if (refreshBtn) {
         refreshBtn.addEventListener('click', function() {
@@ -1237,7 +1392,18 @@ async function loadBusinessData() {
 
 async function loadAppointments() {
     try {
-        const response = await fetch(`/api/appointments?businessId=${currentBusinessId}`);
+        let url = `/api/appointments?businessId=${currentBusinessId}`;
+        const params = new URLSearchParams();
+        const dateFilter = document.getElementById('datePicker');
+        const stylistFilter = document.getElementById('stylistFilter');
+        const statusFilter = document.getElementById('statusFilter');
+        if (dateFilter && dateFilter.value) params.append('date', dateFilter.value);
+        if (stylistFilter && stylistFilter.value && stylistFilter.value !== 'all') params.append('stylist', stylistFilter.value);
+        if (statusFilter && statusFilter.value && statusFilter.value !== 'all') params.append('status', statusFilter.value);
+        const qs = params.toString();
+        if (qs) url += `&${qs}`;
+
+        const response = await fetch(url);
         const result = await response.json();
         
         if (response.ok) {
@@ -1252,41 +1418,101 @@ async function loadAppointments() {
 }
 
 function displayAppointments(appointments) {
+    // Card list view (if exists)
     const appointmentsList = document.getElementById('appointmentsList');
-    if (!appointmentsList) return;
-    
-    appointmentsList.innerHTML = '';
-    
-    if (appointments.length === 0) {
-        appointmentsList.innerHTML = '<p class="no-appointments">No appointments scheduled</p>';
+    if (appointmentsList) {
+        appointmentsList.innerHTML = '';
+        if (appointments.length === 0) {
+            appointmentsList.innerHTML = '<p class="no-appointments">No appointments scheduled</p>';
+        } else {
+            appointments.forEach(appointment => {
+                const appointmentItem = document.createElement('div');
+                appointmentItem.className = 'appointment-item';
+                const appointmentDate = new Date(appointment.appointment_date);
+                const formattedDate = appointmentDate.toLocaleDateString() + ' ' + appointmentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const userObj = appointment.customers || appointment.users;
+                appointmentItem.innerHTML = `
+                    <div class="appointment-info">
+                        <h3>${appointment.service}</h3>
+                        <p>Customer: ${userObj ? userObj.name : 'N/A'}</p>
+                        <p>Date: ${formattedDate}</p>
+                        <p>Phone: ${userObj ? userObj.phone : 'N/A'}</p>
+                        ${appointment.notes ? `<p>Notes: ${appointment.notes}</p>` : ''}
+                    </div>
+                    <div class="appointment-actions">
+                        <span class="status-badge status-${appointment.status}">${appointment.status}</span>
+                        <div>
+                            <button class="btn-secondary" onclick="updateAppointmentStatus('${appointment.id}', 'confirmed')">Confirm</button>
+                            <button class="btn-secondary" onclick="updateAppointmentStatus('${appointment.id}', 'cancelled')">Cancel</button>
+                        </div>
+                    </div>
+                `;
+                appointmentsList.appendChild(appointmentItem);
+            });
+        }
         return;
     }
-    
+
+    // Table view (business.html)
+    const tbody = document.getElementById('appointmentsTbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    if (appointments.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No appointments found</td></tr>';
+        return;
+    }
+
     appointments.forEach(appointment => {
-        const appointmentItem = document.createElement('div');
-        appointmentItem.className = 'appointment-item';
-        
+        const row = document.createElement('tr');
         const appointmentDate = new Date(appointment.appointment_date);
-        const formattedDate = appointmentDate.toLocaleDateString() + ' ' + appointmentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
-        appointmentItem.innerHTML = `
-            <div class="appointment-info">
-                <h3>${appointment.service}</h3>
-                <p>Customer: ${appointment.users ? appointment.users.name : 'N/A'}</p>
-                <p>Date: ${formattedDate}</p>
-                <p>Phone: ${appointment.users ? appointment.users.phone : 'N/A'}</p>
-                ${appointment.notes ? `<p>Notes: ${appointment.notes}</p>` : ''}
-            </div>
-            <div class="appointment-actions">
-                <span class="status-badge status-${appointment.status}">${appointment.status}</span>
-                <div>
-                    <button class="btn-secondary" onclick="updateAppointmentStatus('${appointment.id}', 'confirmed')">Confirm</button>
-                    <button class="btn-secondary" onclick="updateAppointmentStatus('${appointment.id}', 'cancelled')">Cancel</button>
+        const formattedDate = appointmentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + ' at ' + appointmentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        const userObj = appointment.customers || appointment.users;
+        const customerName = userObj ? userObj.name : 'N/A';
+        const avatarLetter = customerName.charAt(0).toUpperCase();
+        row.innerHTML = `
+            <td>
+                <div class="customer-cell">
+                    <div class="customer-avatar">${avatarLetter}</div>
+                    <div>${customerName}</div>
                 </div>
-            </div>
+            </td>
+            <td>${appointment.service}</td>
+            <td>${appointment.stylist || 'Not assigned'}</td>
+            <td>${formattedDate}</td>
+            <td>${userObj ? userObj.phone : 'N/A'}</td>
+            <td>
+                <span class="status-badge status-${appointment.status}">
+                    ${appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                </span>
+            </td>
+            <td>
+                ${appointment.status === 'pending' ? `<button class="action-btn btn-confirm" data-appointment-id="${appointment.id}">Confirm</button>` : ''}
+                <button class="action-btn btn-cancel" data-appointment-id="${appointment.id}">Cancel</button>
+            </td>
         `;
-        
-        appointmentsList.appendChild(appointmentItem);
+        tbody.appendChild(row);
+    });
+
+    // Attach confirm buttons to open the modal if present
+    const confirmationModal = document.getElementById('confirmationModal');
+    const modalCustomer = document.getElementById('modalCustomer');
+    const modalService = document.getElementById('modalService');
+    const modalStylist = document.getElementById('modalStylist');
+    const modalDateTime = document.getElementById('modalDateTime');
+
+    document.querySelectorAll('.btn-confirm[data-appointment-id]').forEach(button => {
+        button.addEventListener('click', function() {
+            const row = this.closest('tr');
+            if (row && confirmationModal) {
+                if (modalCustomer) modalCustomer.textContent = row.querySelector('.customer-cell div:last-child')?.textContent || '';
+                if (modalService) modalService.textContent = row.cells[1]?.textContent || '';
+                if (modalStylist) modalStylist.textContent = row.cells[2]?.textContent || '';
+                if (modalDateTime) modalDateTime.textContent = row.cells[3]?.textContent || '';
+                confirmationModal.dataset.appointmentId = this.getAttribute('data-appointment-id');
+                confirmationModal.style.display = 'flex';
+            }
+        });
     });
 }
 
@@ -1300,13 +1526,21 @@ function updateStats(appointments) {
         apt.status === 'pending'
     );
     
+    // Card dashboard ids
     const todayCount = document.getElementById('todayCount');
     const pendingCount = document.getElementById('pendingCount');
     const totalCount = document.getElementById('totalCount');
-    
     if (todayCount) todayCount.textContent = todayAppointments.length;
     if (pendingCount) pendingCount.textContent = pendingAppointments.length;
     if (totalCount) totalCount.textContent = appointments.length;
+
+    // Business.html ids
+    const todaysAppointmentsCount = document.getElementById('todaysAppointmentsCount');
+    const pendingAppointmentsCount = document.getElementById('pendingAppointmentsCount');
+    const appointmentBadge = document.getElementById('appointmentBadge');
+    if (todaysAppointmentsCount) todaysAppointmentsCount.textContent = todayAppointments.length;
+    if (pendingAppointmentsCount) pendingAppointmentsCount.textContent = pendingAppointments.length;
+    if (appointmentBadge) appointmentBadge.textContent = pendingAppointments.length;
 }
 
 async function updateAppointmentStatus(appointmentId, status) {
