@@ -206,6 +206,10 @@ input:focus, select:focus, textarea:focus {
 #addService:hover {
     background-color: #2980b9; /* Darker blue on hover */
 }
+
+.hidden {
+    display: none;
+}
 /* Authentication Styles */
 .auth-switch {
     margin-top: 20px;
@@ -434,7 +438,7 @@ input:focus, select:focus, textarea:focus {
     .stats-container {
         grid-template-columns: 1fr;
     }
-    .service-input {
+     .service-input {
         grid-template-columns: 1fr; /* Stack on smaller screens */
     }
 }
