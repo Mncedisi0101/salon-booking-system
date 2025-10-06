@@ -54,7 +54,7 @@ module.exports = async (req, res) => {
         }])
         .select(`
           *,
-          users (name, email, phone),
+          customers (name, email, phone),
           services (name, description, price, duration)
         `);
       
@@ -76,7 +76,7 @@ module.exports = async (req, res) => {
       .from('appointments')
       .select(`
         *,
-        users (name, email, phone)
+        customers (name, email, phone)
       `)
       .eq('business_id', businessId)
       .order('appointment_date', { ascending: true });
