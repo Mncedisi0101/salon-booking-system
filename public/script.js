@@ -603,6 +603,319 @@ async function loadServicesForBooking() {
         console.error('Error loading services for booking:', error);
     }
 }
+    // Service Management Functions
+    function initServiceManagement() {
+        const addServiceBtn = document.getElementById('addServiceBtn');
+        const serviceModal = document.getElementById('serviceModal');
+        const serviceForm = document.getElementById('serviceForm');
+        const cancelServiceBtn = document.getElementById('cancelService');
+        const closeModalBtn = serviceModal.querySelector('.close');
+
+        // Open modal when Add Service button is clicked
+        if (addServiceBtn) {
+            addServiceBtn.addEventListener('click', function() {
+                openServiceModal();
+            });
+        }
+
+        // Close modal when close button is clicked
+        if (closeModalBtn) {
+            closeModalBtn.addEventListener('click', function() {
+                closeServiceModal();
+            });
+        }
+
+        // Close modal when cancel button is clicked
+        if (cancelServiceBtn) {
+            cancelServiceBtn.addEventListener('click', function() {
+                closeServiceModal();
+            });
+        }
+
+        // Close modal when clicking outside
+        if (serviceModal) {
+            serviceModal.addEventListener('click', function(e) {
+                if (e.target === serviceModal) {
+                    closeServiceModal();
+                }
+            });
+        }
+
+        // Handle form submission
+        if (serviceForm) {
+            serviceForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                await handleServiceFormSubmit();
+            });
+        }
+
+        // Load services when page loads
+        loadServices();
+    }
+
+    function openServiceModal(service = null) {
+        const modal = document.getElementById('serviceModal');
+        const modalTitle = document.getElementById('serviceModalTitle');
+        const form = document.getElementById('serviceForm');
+        const editingServiceId = document.getElementById('editingServiceId');
+
+        if (service) {
+            // Editing existing service
+            modalTitle.textContent = 'Edit Service';
+            document.getElementById('serviceName').value = service.name;
+            document.getElementById('serviceDescription').value = service.description || '';
+            document.getElementById('servicePrice').value = service.price;
+            document.getElementById('serviceDuration').value = service.duration;
+            editingServiceId.value = service.id;
+        } else {
+            // Adding new service
+            modalTitle.textContent = 'Add New Service';
+            form.reset();
+            editingServiceId.value = '';
+        }
+
+        modal.classList.remove('hidden');
+    }
+
+    function closeServiceModal() {
+        const modal = document.getElementById('serviceModal');
+        modal.classList.add('hidden');
+    }
+
+    async function handleServiceFormSubmit() {
+        const form = document.getElementById('serviceForm');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        
+        submitBtn.textContent = 'Saving...';
+        submitBtn.disabled = true;
+
+        try {
+            const serviceData = {
+                businessId: currentBusinessId,
+                name: document.getElementById('serviceName').value,
+                description: document.getElementById('serviceDescription').value,
+                price: parseFloat(document.getElementById('servicePrice').value),
+                duration: parseInt(document.getElementById('serviceDuration').value)
+            };
+
+            const editingServiceId = document.getElementById('editingServiceId').value;
+            let result;
+
+            if (editingServiceId) {
+                // Update existing service
+                result = await updateService(editingServiceId, serviceData);
+            } else {
+                // Create new service
+                result = await createService(serviceData);
+            }
+
+            if (result) {
+                closeServiceModal();
+                await loadServices(); // Reload the services list
+                showNotification('Service saved successfully!', 'success');
+            }
+
+        } catch (error) {
+            console.error('Error saving service:', error);
+            showNotification('Error saving service: ' + error.message, 'error');
+        } finally {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
+    }
+
+    async function loadServices() {
+        const servicesList = document.getElementById('servicesList');
+        if (!servicesList) return;
+
+        try {
+            servicesList.innerHTML = '<div class="loading">Loading services...</div>';
+            
+            const services = await loadBusinessServices(currentBusinessId);
+            
+            if (services.length === 0) {
+                servicesList.innerHTML = `
+                    <div class="no-services">
+                        <p>No services added yet.</p>
+                        <p>Click "Add New Service" to get started!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            servicesList.innerHTML = '';
+            
+            services.forEach(service => {
+                const serviceItem = document.createElement('div');
+                serviceItem.className = 'service-item';
+                serviceItem.innerHTML = `
+                    <div class="service-info">
+                        <h3>${service.name}</h3>
+                        ${service.description ? `<p>${service.description}</p>` : ''}
+                        <div class="service-meta">
+                            <span class="service-price">R${service.price}</span>
+                            <span class="service-duration">${service.duration} minutes</span>
+                        </div>
+                    </div>
+                    <div class="service-actions">
+                        <button class="service-action-btn service-edit" onclick="editService('${service.id}')">
+                            Edit
+                        </button>
+                        <button class="service-action-btn service-delete" onclick="deleteService('${service.id}')">
+                            Delete
+                        </button>
+                    </div>
+                `;
+                servicesList.appendChild(serviceItem);
+            });
+
+        } catch (error) {
+            console.error('Error loading services:', error);
+            servicesList.innerHTML = '<div class="error">Error loading services. Please try again.</div>';
+        }
+    }
+
+    async function editService(serviceId) {
+        try {
+            const services = await loadBusinessServices(currentBusinessId);
+            const service = services.find(s => s.id === serviceId);
+            
+            if (service) {
+                openServiceModal(service);
+            } else {
+                throw new Error('Service not found');
+            }
+        } catch (error) {
+            console.error('Error editing service:', error);
+            showNotification('Error loading service details', 'error');
+        }
+    }
+
+    async function deleteService(serviceId) {
+        if (!confirm('Are you sure you want to delete this service? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            const serviceItem = document.querySelector(`[onclick="editService('${serviceId}')"]`)?.closest('.service-item');
+            if (serviceItem) {
+                serviceItem.classList.add('loading');
+            }
+
+            const response = await fetch(`/api/services?id=${serviceId}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                await loadServices(); // Reload the services list
+                showNotification('Service deleted successfully!', 'success');
+            } else {
+                throw new Error(result.error || 'Failed to delete service');
+            }
+
+        } catch (error) {
+            console.error('Error deleting service:', error);
+            showNotification('Error deleting service: ' + error.message, 'error');
+        }
+    }
+
+    async function updateService(serviceId, serviceData) {
+        try {
+            const response = await fetch('/api/services', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    id: serviceId,
+                    ...serviceData
+                })
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                return result.service;
+            } else {
+                throw new Error(result.error || 'Failed to update service');
+            }
+        } catch (error) {
+            console.error('Error updating service:', error);
+            throw error;
+        }
+    }
+
+    // Utility function for notifications
+    function showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.textContent = message;
+        
+        // Add styles for notification
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 5px;
+            color: white;
+            font-weight: 500;
+            z-index: 10000;
+            animation: slideIn 0.3s ease;
+            max-width: 300px;
+        `;
+        
+        if (type === 'success') {
+            notification.style.backgroundColor = 'var(--success-color)';
+        } else if (type === 'error') {
+            notification.style.backgroundColor = 'var(--error-color)';
+        } else {
+            notification.style.backgroundColor = 'var(--warning-color)';
+        }
+        
+        document.body.appendChild(notification);
+        
+        // Remove notification after 3 seconds
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
+    }
+
+    // Add these animations to your CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
 async function handleAppointmentBooking(appointmentData) {
     try {
         const response = await fetch('/api/appointments', {
@@ -709,6 +1022,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 currentBusinessId = businessId;
                 loadBusinessData();
                 loadAppointments();
+                 loadServices(); // Load services when dashboard loads
             } else {
                 alert('Access denied');
                 window.location.href = 'customer.html?type=business';
