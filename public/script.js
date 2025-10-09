@@ -1535,61 +1535,61 @@ function initializeDashboard(businessUser) {
     const owner = document.getElementById('dashboardOwnerName');
     if (owner) owner.textContent = (businessUser.name || '').split(' ')[0] || 'Owner';
 }
-function initStylistsModal() {
-    const stylistsModal = document.getElementById('stylistsModal');
-    const openBtn = document.getElementById('menuStylists');
-    const closeX = document.getElementById('closeStylistsModal');
-    const closeBtn = document.getElementById('closeStylistsBtn');
-    const addBtn = document.getElementById('addStylistBtn');
-    const nameInput = document.getElementById('newStylistName');
-    const list = document.getElementById('stylistsList');
+// function initStylistsModal() {
+//     const stylistsModal = document.getElementById('stylistsModal');
+//     const openBtn = document.getElementById('menuStylists');
+//     const closeX = document.getElementById('closeStylistsModal');
+//     const closeBtn = document.getElementById('closeStylistsBtn');
+//     const addBtn = document.getElementById('addStylistBtn');
+//     const nameInput = document.getElementById('newStylistName');
+//     const list = document.getElementById('stylistsList');
 
-    if (openBtn && stylistsModal) {
-        openBtn.addEventListener('click', () => {
-            stylistsModal.style.display = 'flex';
-        });
-    }
+//     if (openBtn && stylistsModal) {
+//         openBtn.addEventListener('click', () => {
+//             stylistsModal.style.display = 'flex';
+//         });
+//     }
 
-    [closeX, closeBtn].forEach(btn => {
-        if (btn && stylistsModal) {
-            btn.addEventListener('click', () => {
-                stylistsModal.style.display = 'none';
-            });
-        }
-    });
+//     [closeX, closeBtn].forEach(btn => {
+//         if (btn && stylistsModal) {
+//             btn.addEventListener('click', () => {
+//                 stylistsModal.style.display = 'none';
+//             });
+//         }
+//     });
 
-    window.addEventListener('click', function(event) {
-        if (event.target === stylistsModal) {
-            stylistsModal.style.display = 'none';
-        }
-    });
+//     window.addEventListener('click', function(event) {
+//         if (event.target === stylistsModal) {
+//             stylistsModal.style.display = 'none';
+//         }
+//     });
 
-    if (addBtn && list && nameInput) {
-        addBtn.addEventListener('click', function() {
-            const val = nameInput.value.trim();
-            if (!val) return;
-            const wrapper = document.createElement('div');
-            wrapper.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid #f0f0f0;';
-            wrapper.innerHTML = `<div>${val}</div><button class="action-btn btn-cancel">Remove</button>`;
-            list.appendChild(wrapper);
-            nameInput.value = '';
-            const removeBtn = wrapper.querySelector('.btn-cancel');
-            removeBtn.addEventListener('click', function() {
-                if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
-            });
-        });
-    }
+//     if (addBtn && list && nameInput) {
+//         addBtn.addEventListener('click', function() {
+//             const val = nameInput.value.trim();
+//             if (!val) return;
+//             const wrapper = document.createElement('div');
+//             wrapper.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid #f0f0f0;';
+//             wrapper.innerHTML = `<div>${val}</div><button class="action-btn btn-cancel">Remove</button>`;
+//             list.appendChild(wrapper);
+//             nameInput.value = '';
+//             const removeBtn = wrapper.querySelector('.btn-cancel');
+//             removeBtn.addEventListener('click', function() {
+//                 if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
+//             });
+//         });
+//     }
 
-    // Attach remove to existing buttons
-    if (list) {
-        list.querySelectorAll('.btn-cancel').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const item = this.closest('div');
-                if (item && item.parentNode) item.parentNode.removeChild(item);
-            });
-        });
-    }
-}
+//     // Attach remove to existing buttons
+//     if (list) {
+//         list.querySelectorAll('.btn-cancel').forEach(btn => {
+//             btn.addEventListener('click', function() {
+//                 const item = this.closest('div');
+//                 if (item && item.parentNode) item.parentNode.removeChild(item);
+//             });
+//         });
+//     }
+// }
 
 function initBusinessDashboard() {
     const refreshBtn = document.getElementById('refreshBtn');
@@ -1622,9 +1622,6 @@ function initBusinessDashboard() {
     
     // Initialize stylist management
     initStylistManagement();
-    // Initialize Stylists modal handlers
-    initStylistsModal();
-
     // Logout
     const logoutEl = document.querySelector('.logout-btn');
     if (logoutEl) {
