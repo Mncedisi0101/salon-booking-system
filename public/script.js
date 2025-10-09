@@ -639,34 +639,53 @@ async function createService(serviceData) {
     }
 }
 // Function for loading services into booking form
-async function loadServicesForBooking() {
-    if (!currentBusinessId) {
-        console.error('No business ID available');
-        return;
-    }
-
-    try {
-        const services = await loadBusinessServices(currentBusinessId);
-        const serviceSelect = document.getElementById('service');
-        
-        if (serviceSelect) {
-            serviceSelect.innerHTML = '<option value="">Choose a service</option>';
-            
-            services.forEach(service => {
-                const option = document.createElement('option');
-                option.value = service.id;
-                option.textContent = `${service.name} - R${service.price} (${service.duration} min)`;
-                option.setAttribute('data-price', service.price);
-                option.setAttribute('data-duration', service.duration);
-                serviceSelect.appendChild(option);
-            });
-            
-            businessServices = services;
+    async function loadServicesForBooking() {
+        if (!currentBusinessId) {
+            console.error('No business ID available');
+            return;
         }
-    } catch (error) {
-        console.error('Error loading services for booking:', error);
+
+        try {
+            // Load services
+            const services = await loadBusinessServices(currentBusinessId);
+            const serviceSelect = document.getElementById('service');
+            
+            if (serviceSelect) {
+                serviceSelect.innerHTML = '<option value="">Choose a service</option>';
+                
+                services.forEach(service => {
+                    const option = document.createElement('option');
+                    option.value = service.id;
+                    option.textContent = `${service.name} - R${service.price} (${service.duration} min)`;
+                    option.setAttribute('data-price', service.price);
+                    option.setAttribute('data-duration', service.duration);
+                    serviceSelect.appendChild(option);
+                });
+                
+                businessServices = services;
+            }
+
+            // Load stylists
+            const stylists = await loadBusinessStylists(currentBusinessId);
+            const stylistSelect = document.getElementById('stylist');
+            
+            if (stylistSelect) {
+                stylistSelect.innerHTML = '<option value="">Any available stylist</option>';
+                
+                stylists
+                    .filter(stylist => stylist.is_active)
+                    .forEach(stylist => {
+                        const option = document.createElement('option');
+                        option.value = stylist.id;
+                        option.textContent = stylist.name + (stylist.specialization ? ` - ${stylist.specialization}` : '');
+                        stylistSelect.appendChild(option);
+                    });
+            }
+
+        } catch (error) {
+            console.error('Error loading services/stylists for booking:', error);
+        }
     }
-}
     // Service Management Functions
     function initServiceManagement() {
         const addServiceBtn = document.getElementById('addServiceBtn');
@@ -919,7 +938,312 @@ async function loadServicesForBooking() {
             throw error;
         }
     }
+    // Stylist Management Functions
+    function initStylistManagement() {
+        const addStylistBtn = document.getElementById('addStylistBtn');
+        const stylistModal = document.getElementById('stylistModal');
+        const stylistForm = document.getElementById('stylistForm');
+        const cancelStylistBtn = document.getElementById('cancelStylist');
+        const closeModalBtn = stylistModal.querySelector('.close');
 
+        // Open modal when Add Stylist button is clicked
+        if (addStylistBtn) {
+            addStylistBtn.addEventListener('click', function() {
+                openStylistModal();
+            });
+        }
+
+        // Close modal when close button is clicked
+        if (closeModalBtn) {
+            closeModalBtn.addEventListener('click', function() {
+                closeStylistModal();
+            });
+        }
+
+        // Close modal when cancel button is clicked
+        if (cancelStylistBtn) {
+            cancelStylistBtn.addEventListener('click', function() {
+                closeStylistModal();
+            });
+        }
+
+        // Close modal when clicking outside
+        if (stylistModal) {
+            stylistModal.addEventListener('click', function(e) {
+                if (e.target === stylistModal) {
+                    closeStylistModal();
+                }
+            });
+        }
+
+        // Handle form submission
+        if (stylistForm) {
+            stylistForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                await handleStylistFormSubmit();
+            });
+        }
+
+        // Load stylists when page loads
+        loadStylists();
+    }
+
+    function openStylistModal(stylist = null) {
+        const modal = document.getElementById('stylistModal');
+        const modalTitle = document.getElementById('stylistModalTitle');
+        const form = document.getElementById('stylistForm');
+        const editingStylistId = document.getElementById('editingStylistId');
+
+        if (stylist) {
+            // Editing existing stylist
+            modalTitle.textContent = 'Edit Stylist';
+            document.getElementById('stylistName').value = stylist.name;
+            document.getElementById('stylistEmail').value = stylist.email || '';
+            document.getElementById('stylistPhone').value = stylist.phone || '';
+            document.getElementById('stylistSpecialization').value = stylist.specialization || '';
+            document.getElementById('stylistBio').value = stylist.bio || '';
+            document.getElementById('stylistImageUrl').value = stylist.image_url || '';
+            document.getElementById('stylistActive').checked = stylist.is_active !== false;
+            editingStylistId.value = stylist.id;
+        } else {
+            // Adding new stylist
+            modalTitle.textContent = 'Add New Stylist';
+            form.reset();
+            document.getElementById('stylistActive').checked = true;
+            editingStylistId.value = '';
+        }
+
+        modal.classList.remove('hidden');
+    }
+
+    function closeStylistModal() {
+        const modal = document.getElementById('stylistModal');
+        modal.classList.add('hidden');
+    }
+
+    async function handleStylistFormSubmit() {
+        const form = document.getElementById('stylistForm');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        
+        submitBtn.textContent = 'Saving...';
+        submitBtn.disabled = true;
+
+        try {
+            const stylistData = {
+                businessId: currentBusinessId,
+                name: document.getElementById('stylistName').value,
+                email: document.getElementById('stylistEmail').value,
+                phone: document.getElementById('stylistPhone').value,
+                specialization: document.getElementById('stylistSpecialization').value,
+                bio: document.getElementById('stylistBio').value,
+                imageUrl: document.getElementById('stylistImageUrl').value,
+                isActive: document.getElementById('stylistActive').checked
+            };
+
+            const editingStylistId = document.getElementById('editingStylistId').value;
+            let result;
+
+            if (editingStylistId) {
+                // Update existing stylist
+                result = await updateStylist(editingStylistId, stylistData);
+            } else {
+                // Create new stylist
+                result = await createStylist(stylistData);
+            }
+
+            if (result) {
+                closeStylistModal();
+                await loadStylists(); // Reload the stylists list
+                showNotification('Stylist saved successfully!', 'success');
+            }
+
+        } catch (error) {
+            console.error('Error saving stylist:', error);
+            showNotification('Error saving stylist: ' + error.message, 'error');
+        } finally {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
+    }
+
+    async function loadStylists() {
+        const stylistsList = document.getElementById('stylistsList');
+        if (!stylistsList) return;
+
+        try {
+            stylistsList.innerHTML = '<div class="loading">Loading stylists...</div>';
+            
+            const stylists = await loadBusinessStylists(currentBusinessId);
+            
+            if (stylists.length === 0) {
+                stylistsList.innerHTML = `
+                    <div class="no-stylists">
+                        <p>No stylists added yet.</p>
+                        <p>Click "Add New Stylist" to get started!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            stylistsList.innerHTML = '';
+            
+            stylists.forEach(stylist => {
+                const stylistCard = document.createElement('div');
+                stylistCard.className = 'stylist-card';
+                
+                const firstName = stylist.name.split(' ')[0];
+                const avatarContent = stylist.image_url 
+                    ? `<img src="${stylist.image_url}" alt="${stylist.name}" onerror="this.style.display='none'; this.parentElement.innerHTML='${firstName.charAt(0).toUpperCase()}'">`
+                    : firstName.charAt(0).toUpperCase();
+                
+                stylistCard.innerHTML = `
+                    <div class="stylist-header">
+                        <div class="stylist-avatar ${stylist.image_url ? 'has-image' : ''}">
+                            ${avatarContent}
+                        </div>
+                        <div class="stylist-info">
+                            <div class="stylist-name">${stylist.name}</div>
+                            ${stylist.specialization ? `<div class="stylist-specialization">${stylist.specialization}</div>` : ''}
+                            ${stylist.email ? `<div class="stylist-contact">${stylist.email}</div>` : ''}
+                            ${stylist.phone ? `<div class="stylist-contact">${stylist.phone}</div>` : ''}
+                            <div class="stylist-status ${stylist.is_active ? 'active' : 'inactive'}">
+                                <span class="stylist-status-dot"></span>
+                                ${stylist.is_active ? 'Active' : 'Inactive'}
+                            </div>
+                        </div>
+                    </div>
+                    ${stylist.bio ? `<div class="stylist-bio">${stylist.bio}</div>` : ''}
+                    <div class="stylist-actions">
+                        <button class="stylist-action-btn stylist-edit" onclick="editStylist('${stylist.id}')">
+                            Edit
+                        </button>
+                        <button class="stylist-action-btn stylist-delete" onclick="deleteStylist('${stylist.id}')">
+                            Delete
+                        </button>
+                    </div>
+                `;
+                stylistsList.appendChild(stylistCard);
+            });
+
+        } catch (error) {
+            console.error('Error loading stylists:', error);
+            stylistsList.innerHTML = '<div class="error">Error loading stylists. Please try again.</div>';
+        }
+    }
+
+    async function editStylist(stylistId) {
+        try {
+            const stylists = await loadBusinessStylists(currentBusinessId);
+            const stylist = stylists.find(s => s.id === stylistId);
+            
+            if (stylist) {
+                openStylistModal(stylist);
+            } else {
+                throw new Error('Stylist not found');
+            }
+        } catch (error) {
+            console.error('Error editing stylist:', error);
+            showNotification('Error loading stylist details', 'error');
+        }
+    }
+
+    async function deleteStylist(stylistId) {
+        if (!confirm('Are you sure you want to delete this stylist? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            const stylistCard = document.querySelector(`[onclick="editStylist('${stylistId}')"]`)?.closest('.stylist-card');
+            if (stylistCard) {
+                stylistCard.classList.add('loading');
+            }
+
+            const response = await fetch(`/api/stylists?id=${stylistId}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                await loadStylists(); // Reload the stylists list
+                showNotification('Stylist deleted successfully!', 'success');
+            } else {
+                throw new Error(result.error || 'Failed to delete stylist');
+            }
+
+        } catch (error) {
+            console.error('Error deleting stylist:', error);
+            showNotification('Error deleting stylist: ' + error.message, 'error');
+        }
+    }
+
+    // API Functions for Stylists
+    async function loadBusinessStylists(businessId) {
+        try {
+            const response = await fetch(`/api/stylists?businessId=${businessId}`);
+            const result = await response.json();
+            
+            if (response.ok) {
+                return result.stylists || [];
+            } else {
+                console.error('Error loading stylists:', result.error);
+                return [];
+            }
+        } catch (error) {
+            console.error('Error loading stylists:', error);
+            return [];
+        }
+    }
+
+    async function createStylist(stylistData) {
+        try {
+            const response = await fetch('/api/stylists', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(stylistData)
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                return result.stylist;
+            } else {
+                throw new Error(result.error || 'Failed to create stylist');
+            }
+        } catch (error) {
+            console.error('Error creating stylist:', error);
+            throw error;
+        }
+    }
+
+    async function updateStylist(stylistId, stylistData) {
+        try {
+            const response = await fetch('/api/stylists', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    id: stylistId,
+                    ...stylistData
+                })
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                return result.stylist;
+            } else {
+                throw new Error(result.error || 'Failed to update stylist');
+            }
+        } catch (error) {
+            console.error('Error updating stylist:', error);
+            throw error;
+        }
+    }
     // Utility function for notifications
     function showNotification(message, type = 'info') {
         // Create notification element
@@ -1097,6 +1421,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadAppointments();
                 loadServices(); // Load services when dashboard loads
                 initServiceManagement(); // Initialize service management UI
+                loadStylists(); // Load stylists when dashboard loads
             } else {
                 alert('Access denied');
                 window.location.href = 'customer.html?type=business';
@@ -1293,7 +1618,11 @@ function initBusinessDashboard() {
         const options = { year: 'numeric', month: 'long', day: 'numeric' };
         currentDateEl.textContent = now.toLocaleDateString('en-US', options);
     }
-
+     // Initialize service management
+    initServiceManagement();
+    
+    // Initialize stylist management
+    initStylistManagement();
     // Initialize Stylists modal handlers
     initStylistsModal();
 

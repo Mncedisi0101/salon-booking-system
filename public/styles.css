@@ -414,6 +414,230 @@ input:focus, select:focus, textarea:focus {
     display: inline-block;
     margin: 5px 0;
 }
+/* Stylists Management Styles */
+.stylists-management-container {
+    background: white;
+    border-radius: 10px;
+    padding: 30px;
+    box-shadow: var(--shadow);
+    margin-bottom: 40px;
+}
+
+.stylists-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.stylist-card {
+    background: var(--secondary-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 20px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.stylist-card:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(109, 40, 217, 0.15);
+    transform: translateY(-2px);
+}
+
+.stylist-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.stylist-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.stylist-avatar.has-image {
+    background: transparent;
+}
+
+.stylist-avatar.has-image img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.stylist-info {
+    flex: 1;
+}
+
+.stylist-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 5px;
+}
+
+.stylist-specialization {
+    color: var(--primary-color);
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 5px;
+}
+
+.stylist-contact {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    margin-bottom: 3px;
+}
+
+.stylist-bio {
+    font-size: 0.9rem;
+    color: var(--text-color);
+    line-height: 1.4;
+    margin-bottom: 15px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.stylist-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.stylist-status.active {
+    background: rgba(16, 185, 129, 0.1);
+    color: #065f46;
+}
+
+.stylist-status.inactive {
+    background: rgba(107, 114, 128, 0.1);
+    color: var(--text-light);
+}
+
+.stylist-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.stylist-status.active .stylist-status-dot {
+    background: #10b981;
+}
+
+.stylist-status.inactive .stylist-status-dot {
+    background: var(--text-light);
+}
+
+.stylist-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.stylist-action-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background: white;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.stylist-edit {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.stylist-edit:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+.stylist-delete {
+    color: var(--error-color);
+    border-color: var(--error-color);
+}
+
+.stylist-delete:hover {
+    background: var(--error-color);
+    color: white;
+}
+
+.no-stylists {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px;
+    color: var(--text-light);
+}
+
+.no-stylists p {
+    margin-bottom: 15px;
+}
+
+/* Checkbox Styles */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-color);
+}
+
+.checkbox-label input[type="checkbox"] {
+    display: none;
+}
+
+.checkmark {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border-color);
+    border-radius: 3px;
+    margin-right: 8px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkmark {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkmark::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* Stylist Modal Styles */
+#stylistModal .modal-content {
+    max-width: 600px;
+    width: 95%;
+}
 
 @media (max-width: 768px) {
     .container {
@@ -440,5 +664,30 @@ input:focus, select:focus, textarea:focus {
     }
      .service-input {
         grid-template-columns: 1fr; /* Stack on smaller screens */
+    }
+    .stylists-list {
+        grid-template-columns: 1fr;
+    }
+    
+    .stylist-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .stylist-avatar {
+        align-self: center;
+    }
+    
+    .stylist-actions {
+        flex-direction: column;
+    }
+}
+@media (max-width: 480px) {
+    .stylists-management-container {
+        padding: 20px 15px;
+    }
+    
+    .stylist-card {
+        padding: 15px;
     }
 }

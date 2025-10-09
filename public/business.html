@@ -875,7 +875,7 @@
                 <i class="fas fa-home"></i>
                 <span class="menu-text">Dashboard</span>
             </li>
-            <li class="menu-item-with-badge">
+            <li id="menuAppointments" class="menu-item-with-badge">
                 <i class="fas fa-calendar-alt"></i>
                 <span class="menu-text">Appointments</span>
                 <span class="badge" id="appointmentBadge">3</span>
@@ -884,7 +884,7 @@
                 <i class="fas fa-user-tie"></i>
                 <span class="menu-text">Stylists</span>
             </li>
-            <li>
+            <li id="menuQRCode">
                 <i class="fas fa-qrcode"></i>
                 <span class="menu-text">QR Code</span>
             </li>
@@ -913,13 +913,13 @@
                 <p>Manage your salon appointments and stylists</p>
             </div>
             <div class="header-actions">
-                <div class="notification-btn">
+                <div class="notification-btn" id="notificationBtn" title="New bookings">
                     <i class="fas fa-bell"></i>
-                    <div class="notification-badge">3</div>
+                    <div class="notification-badge" id="headerNotificationBadge" style="display:none">0</div>
                 </div>
-                <div class="date-display">
+                <div class="date-display" id="dateDisplay">
                     <i class="fas fa-calendar-day"></i>
-                    <span id="currentDate">May 15, 2023</span>
+                    <span id="currentDate"></span>
                 </div>
             </div>
         </div>
@@ -952,6 +952,16 @@
                 <button id="addServiceBtn" class="btn-primary">Add New Service</button>
                 <div id="servicesList" class="services-list">
                     <!-- Services will be loaded here -->
+                </div>
+            </div>
+            <!-- Stylists Management Section -->
+            <div class="stylists-management-container">
+                <div class="section-header">
+                    <h2>Manage Stylists</h2>
+                    <button id="addStylistBtn" class="btn-primary">Add New Stylist</button>
+                </div>
+                <div id="stylistsList" class="stylists-list">
+                    <!-- Stylists will be loaded here -->
                 </div>
             </div>
             <!-- Appointments Table -->
@@ -1109,42 +1119,50 @@
     </div>
 
     <!-- Stylists Modal -->
-    <div class="modal" id="stylistsModal">
+    <div id="stylistModal" class="modal hidden">
         <div class="modal-content">
-            <div class="modal-header">
-                <h2>Manage Stylists</h2>
-                <button class="close-modal" id="closeStylistsModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div style="margin-bottom:20px;">
-                    <h3>Add New Stylist</h3>
-                    <div style="display:flex; gap:10px; margin-top:10px;">
-                        <input type="text" id="newStylistName" placeholder="Enter stylist name" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:6px;">
-                        <button id="addStylistBtn" class="action-btn btn-confirm">Add Stylist</button>
+            <span class="close">&times;</span>
+            <h2 id="stylistModalTitle">Add New Stylist</h2>
+            <form id="stylistForm">
+                <input type="hidden" id="editingStylistId" value="">
+                <div class="form-group">
+                    <label for="stylistName">Stylist Name *</label>
+                    <input type="text" id="stylistName" name="stylistName" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="stylistEmail">Email</label>
+                        <input type="email" id="stylistEmail" name="stylistEmail">
+                    </div>
+                    <div class="form-group">
+                        <label for="stylistPhone">Phone</label>
+                        <input type="tel" id="stylistPhone" name="stylistPhone">
                     </div>
                 </div>
-                
-                <div>
-                    <h3>Current Stylists</h3>
-                    <div id="stylistsList" style="margin-top:15px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid #f0f0f0;">
-                            <div>Sophia</div>
-                            <button class="action-btn btn-cancel">Remove</button>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid #f0f0f0;">
-                            <div>Michael</div>
-                            <button class="action-btn btn-cancel">Remove</button>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px;">
-                            <div>Jessica</div>
-                            <button class="action-btn btn-cancel">Remove</button>
-                        </div>
-                    </div>
+                <div class="form-group">
+                    <label for="stylistSpecialization">Specialization</label>
+                    <input type="text" id="stylistSpecialization" name="stylistSpecialization" placeholder="e.g., Hair Coloring, Haircuts, etc.">
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button class="action-btn btn-cancel" id="closeStylistsBtn">Close</button>
-            </div>
+                <div class="form-group">
+                    <label for="stylistBio">Bio</label>
+                    <textarea id="stylistBio" name="stylistBio" rows="4" placeholder="Tell us about this stylist's experience and expertise..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="stylistImageUrl">Image URL</label>
+                    <input type="url" id="stylistImageUrl" name="stylistImageUrl" placeholder="https://example.com/image.jpg">
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="stylistActive" name="stylistActive" checked>
+                        <span class="checkmark"></span>
+                        Active (available for bookings)
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="cancelStylist" class="btn-secondary">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Stylist</button>
+                </div>
+            </form>
         </div>
     </div>
     <!-- Add Service Modal -->
@@ -1174,6 +1192,20 @@
             </form>
         </div>
     </div>
+
+    <!-- QR Code Modal -->
+    <div class="modal hidden" id="qrModal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Business QR Code</h2>
+            <div id="modalQrCode" style="text-align:center; margin: 20px 0;"></div>
+            <div class="form-actions" style="justify-content: center;">
+                <button id="downloadQrBtn" class="btn-secondary">Download</button>
+                <button id="printQrBtn" class="btn-primary">Print</button>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -1205,10 +1237,15 @@
         loadBusinessData();
         loadAppointments();
 
-        // Set current date
-        const now = new Date();
-        const options = { year: 'numeric', month: 'long', day: 'numeric' };
-        document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', options);
+        // Real-time current date updater
+        function updateCurrentDate() {
+            const now = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            const el = document.getElementById('currentDate');
+            if (el) el.textContent = now.toLocaleDateString('en-US', options);
+        }
+        updateCurrentDate();
+        setInterval(updateCurrentDate, 60000);
         
         // Modal functionality
         const confirmationModal = document.getElementById('confirmationModal');
@@ -1299,6 +1336,164 @@
         document.getElementById('datePicker').addEventListener('change', loadAppointments);
         document.getElementById('stylistFilter').addEventListener('change', loadAppointments);
         document.getElementById('statusFilter').addEventListener('change', loadAppointments);
+
+        // Sidebar: Appointments navigation and calendar
+        const appointmentsMenu = document.getElementById('menuAppointments');
+        if (appointmentsMenu) {
+            appointmentsMenu.addEventListener('click', function() {
+                // highlight active menu
+                document.querySelectorAll('.sidebar-menu li').forEach(li => li.classList.remove('active'));
+                appointmentsMenu.classList.add('active');
+                // scroll to section
+                const apptSection = document.querySelector('.appointments-section');
+                if (apptSection) apptSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // open calendar for date filter
+                const dp = document.getElementById('datePicker');
+                if (dp) {
+                    dp.focus();
+                    if (typeof dp.showPicker === 'function') {
+                        try { dp.showPicker(); } catch(e) {}
+                    }
+                }
+            });
+        }
+
+        // Sidebar: QR Code modal with download/print
+        const qrMenu = document.getElementById('menuQRCode');
+        const qrModal = document.getElementById('qrModal');
+        const modalQrCode = document.getElementById('modalQrCode');
+        const downloadQrBtn = document.getElementById('downloadQrBtn');
+        const printQrBtn = document.getElementById('printQrBtn');
+
+        if (qrMenu && qrModal && modalQrCode) {
+            qrMenu.addEventListener('click', async function() {
+                try {
+                    const resp = await fetch('/api/qrcode', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ businessId: currentBusinessId })
+                    });
+                    const data = await resp.json();
+                    if (!resp.ok) throw new Error(data.error || 'Failed to generate QR code');
+                    modalQrCode.innerHTML = `<img id="qrImage" src="${data.qrCode}" alt="QR Code" style="max-width: 260px;">`;
+                    qrModal.classList.remove('hidden');
+                    qrModal.style.display = 'flex';
+                } catch (err) {
+                    alert('Error generating QR code: ' + err.message);
+                }
+            });
+        }
+
+        // Close QR modal
+        const qrClose = document.querySelector('#qrModal .close');
+        if (qrClose) {
+            qrClose.addEventListener('click', function() {
+                qrModal.classList.add('hidden');
+                qrModal.style.display = 'none';
+            });
+        }
+        window.addEventListener('click', function(e) {
+            if (e.target === qrModal) {
+                qrModal.classList.add('hidden');
+                qrModal.style.display = 'none';
+            }
+        });
+
+        // Download QR
+        if (downloadQrBtn) {
+            downloadQrBtn.addEventListener('click', function() {
+                const img = document.getElementById('qrImage');
+                if (!img || !img.src) return;
+                const a = document.createElement('a');
+                a.href = img.src;
+                a.download = 'salon-qr-code.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            });
+        }
+
+        // Print QR
+        if (printQrBtn) {
+            printQrBtn.addEventListener('click', function() {
+                const img = document.getElementById('qrImage');
+                if (!img || !img.src) return;
+                const printWindow = window.open('', '_blank');
+                if (!printWindow) return;
+                printWindow.document.write('<html><head><title>Print QR Code</title></head><body style="text-align:center; margin:0; padding:20px;">');
+                printWindow.document.write(`<img src="${img.src}" style="max-width:80vw;">`);
+                printWindow.document.write('</body></html>');
+                printWindow.document.close();
+                printWindow.focus();
+                printWindow.print();
+                printWindow.close();
+            });
+        }
+
+        // Real-time notification polling for new bookings
+        const notificationBtn = document.getElementById('notificationBtn');
+        const headerNotificationBadge = document.getElementById('headerNotificationBadge');
+        let lastSeenCreatedAt = null;
+        let latestKnownCreatedAt = null;
+
+        async function pollNewAppointments() {
+            try {
+                const resp = await fetch(`/api/appointments?businessId=${currentBusinessId}`);
+                const data = await resp.json();
+                if (!resp.ok) return;
+
+                const appts = Array.isArray(data.appointments) ? data.appointments : [];
+                const toDate = (v) => v ? new Date(v) : null;
+                const createdDates = appts.map(a => toDate(a.created_at)).filter(Boolean);
+                latestKnownCreatedAt = createdDates.length ? new Date(Math.max.apply(null, createdDates)) : latestKnownCreatedAt;
+
+                if (lastSeenCreatedAt === null) {
+                    // First run: establish baseline with no notification
+                    lastSeenCreatedAt = latestKnownCreatedAt || new Date();
+                    if (headerNotificationBadge) {
+                        headerNotificationBadge.textContent = '0';
+                        headerNotificationBadge.style.display = 'none';
+                    }
+                    return;
+                }
+
+                const newCount = appts.filter(a => {
+                    const c = toDate(a.created_at);
+                    return c && lastSeenCreatedAt && c > lastSeenCreatedAt;
+                }).length;
+
+                if (newCount > 0) {
+                    if (headerNotificationBadge) {
+                        headerNotificationBadge.textContent = String(newCount);
+                        headerNotificationBadge.style.display = 'flex';
+                    }
+                    if (typeof showNotification === 'function') {
+                        showNotification(`${newCount} new booking${newCount > 1 ? 's' : ''} placed`, 'success');
+                    }
+                }
+            } catch (e) {
+                console.warn('Notification poll failed', e);
+            }
+        }
+
+        // Start polling: every 15 seconds
+        setInterval(pollNewAppointments, 15000);
+        // Seed baseline shortly after load
+        setTimeout(pollNewAppointments, 1000);
+
+        if (notificationBtn && headerNotificationBadge) {
+            notificationBtn.addEventListener('click', () => {
+                // Acknowledge: set last seen to latest known and clear badge
+                if (latestKnownCreatedAt) {
+                    lastSeenCreatedAt = latestKnownCreatedAt;
+                } else {
+                    lastSeenCreatedAt = new Date();
+                }
+                headerNotificationBadge.textContent = '0';
+                headerNotificationBadge.style.display = 'none';
+                try { loadAppointments(); } catch(_) {}
+            });
+        }
     });
 
     function initializeDashboard(businessUser) {
