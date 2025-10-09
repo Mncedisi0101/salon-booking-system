@@ -1345,6 +1345,7 @@ document.addEventListener('DOMContentLoaded', function() {
         initBusinessAuthentication();
         initBusinessRegistration();
         handleBusinessLoginRedirect(); 
+        initStylistManagement();
     }
     
     // Customer Booking Page
