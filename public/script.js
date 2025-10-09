@@ -213,13 +213,21 @@ async function generateQRCode(businessId) {
             }
         }
         
+        // FIXED: Store business ID for QR code usage
+        localStorage.setItem('qrBusinessId', businessId);
+        console.log('Stored business ID for QR code:', businessId);
+        
     } catch (error) {
         console.error('QR code generation error:', error);
         
-        // Show fallback URL
+        // FIXED: Create a proper fallback URL with business parameter
+        const fallbackUrl = `${window.location.protocol}//${window.location.host}/customer.html?business=${businessId}`;
+        
+        // Store business ID for the fallback URL
+        localStorage.setItem('qrBusinessId', businessId);
+        
         const qrCodeContainer = document.getElementById('qrCodeContainer');
         if (qrCodeContainer) {
-            const fallbackUrl = `${window.location.protocol}//${window.location.host}/customer.html?business=${businessId}`;
             qrCodeContainer.innerHTML = `
                 <div class="fallback-url">
                     <p>QR code generation failed. Use this URL for bookings:</p>
@@ -238,6 +246,28 @@ function initCustomerAuthentication() {
     const customerRegisterForm = document.getElementById('customerRegisterForm');
     const businessLoginForm = document.getElementById('businessLoginForm');
     const goToDashboardBtn = document.getElementById('goToDashboard');
+    
+    // FIXED: Extract business ID early and log it for debugging
+    const urlParams = new URLSearchParams(window.location.search);
+    currentBusinessId = urlParams.get('business');
+    
+    console.log('Customer page initialized with business ID:', currentBusinessId);
+    console.log('Full URL:', window.location.href);
+    
+    if (currentBusinessId) {
+        console.log('Business ID successfully extracted from URL');
+        // Store it in localStorage as backup
+        localStorage.setItem('qrBusinessId', currentBusinessId);
+    } else {
+        // Check if we have a stored business ID from QR code
+        const storedBusinessId = localStorage.getItem('qrBusinessId');
+        if (storedBusinessId) {
+            currentBusinessId = storedBusinessId;
+            console.log('Using stored business ID from QR code:', currentBusinessId);
+        } else {
+            console.warn('No business ID found in URL or storage');
+        }
+    }
     
     // Tab switching
     authTabs.forEach(tab => {
@@ -478,13 +508,35 @@ async function handleCustomerRegistration() {
             return;
         }
 
-        // Ensure we have a businessId
+        // FIXED: Better business ID extraction from URL
         if (!currentBusinessId) {
             const urlParams = new URLSearchParams(window.location.search);
             currentBusinessId = urlParams.get('business');
+            
+            // Debug logging to help identify the issue
+            console.log('URL Search Params:', window.location.search);
+            console.log('Extracted business ID:', currentBusinessId);
+            console.log('Full URL:', window.location.href);
         }
+        
+        // FIXED: More specific error message and validation
         if (!currentBusinessId) {
-    alert('Invalid booking link. Please use the salon’s booking URL with a business parameter.');
+            // Check if there's a business ID in localStorage from QR code scan
+            const qrBusinessId = localStorage.getItem('qrBusinessId');
+            if (qrBusinessId) {
+                currentBusinessId = qrBusinessId;
+                console.log('Using business ID from QR code storage:', currentBusinessId);
+            } else {
+                console.error('No business ID found in URL or storage');
+                alert('Invalid booking link. Please use the salon\'s booking QR code or URL that includes ?business=ID parameter.');
+                return;
+            }
+        }
+
+        // Validate business ID format
+        if (currentBusinessId && currentBusinessId.length < 5) {
+            console.error('Invalid business ID format:', currentBusinessId);
+            alert('Invalid business ID in the booking link. Please scan the QR code again or contact the salon.');
             return;
         }
         
@@ -496,6 +548,8 @@ async function handleCustomerRegistration() {
             password: password,
             businessId: currentBusinessId
         };
+
+        console.log('Sending customer registration with business ID:', currentBusinessId);
         
         const response = await fetch('/api/auth', {
             method: 'POST',
@@ -518,10 +572,13 @@ async function handleCustomerRegistration() {
             }
             // Friendlier messages for common cases
             if (/Business ID is required/i.test(message)) {
-                message = 'Missing business ID. Open the booking link from the salon QR/URL (it includes ?business=...).';
+                message = 'Missing business ID. The booking link appears to be invalid. Please scan the QR code again.';
             }
             if (/duplicate|already exists|unique/i.test(message)) {
                 message = 'An account with this email already exists for this salon. Please login instead.';
+            }
+            if (/business.*not.*found|invalid.*business/i.test(message)) {
+                message = 'The salon associated with this QR code was not found. Please contact the salon.';
             }
             throw new Error(message);
         }
@@ -547,7 +604,6 @@ async function handleCustomerRegistration() {
         submitBtn.disabled = false;
     }
 }
-
 function showBookingForm(user) {
     document.getElementById('authSection').classList.add('hidden');
     document.getElementById('bookingSection').classList.remove('hidden');
