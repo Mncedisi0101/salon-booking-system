@@ -44,6 +44,7 @@ function initBusinessAuthentication() {
         });
     }
 }
+
 async function handleBusinessRegistration() {
     const businessForm = document.getElementById('businessForm');
     const submitBtn = businessForm.querySelector('button[type="submit"]');
@@ -58,7 +59,7 @@ async function handleBusinessRegistration() {
         
         serviceInputs.forEach(input => {
             const name = input.querySelector('.service-name').value;
-            const description = input.querySelector('.service-description').value;
+            const description = input.querySelector('.service-description')?.value || '';
             const price = parseFloat(input.querySelector('.service-price').value);
             const duration = parseInt(input.querySelector('.service-duration').value);
             
@@ -102,15 +103,10 @@ async function handleBusinessRegistration() {
         
         console.log('Response status:', response.status);
         console.log('Response ok:', response.ok);
-        
-        // Check if the response is successful
         if (!response.ok) {
-            // If it's a 405 error, the API endpoint doesn't exist or is misconfigured
             if (response.status === 405) {
                 throw new Error('API endpoint not configured properly. Please check server setup.');
-            }
-            
-            // Try to get error message from response
+            } 
             let errorMessage = `HTTP error! status: ${response.status}`;
             try {
                 const errorText = await response.text();
@@ -122,8 +118,6 @@ async function handleBusinessRegistration() {
             }
             throw new Error(errorMessage);
         }
-        
-        // Check if response is JSON
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
             const text = await response.text();
@@ -439,7 +433,7 @@ async function handleCustomerLogin() {
         submitBtn.disabled = false;
     }
 }
-// Add this function to script.js
+
 function handleBusinessLoginRedirect() {
     const urlParams = new URLSearchParams(window.location.search);
     const loginType = urlParams.get('type');
@@ -462,6 +456,7 @@ function handleBusinessLoginRedirect() {
         }
     }
 }
+
 async function handleCustomerRegistration() {
     const registerForm = document.getElementById('customerRegisterForm');
     const submitBtn = registerForm.querySelector('button[type="submit"]');
@@ -489,7 +484,7 @@ async function handleCustomerRegistration() {
             currentBusinessId = urlParams.get('business');
         }
         if (!currentBusinessId) {
-            alert('Invalid booking link. Please use the salon’s booking URL with a business parameter.');
+    alert('Invalid booking link. Please use the salon’s booking URL with a business parameter.');
             return;
         }
         
@@ -598,6 +593,7 @@ function showBookingForm(user) {
         });
     }
 }
+
 // Service Management Functions
 async function loadBusinessServices(businessId) {
     try {
@@ -638,680 +634,724 @@ async function createService(serviceData) {
         throw error;
     }
 }
+
 // Function for loading services into booking form
-    async function loadServicesForBooking() {
-        if (!currentBusinessId) {
-            console.error('No business ID available');
-            return;
-        }
-
-        try {
-            // Load services
-            const services = await loadBusinessServices(currentBusinessId);
-            const serviceSelect = document.getElementById('service');
-            
-            if (serviceSelect) {
-                serviceSelect.innerHTML = '<option value="">Choose a service</option>';
-                
-                services.forEach(service => {
-                    const option = document.createElement('option');
-                    option.value = service.id;
-                    option.textContent = `${service.name} - R${service.price} (${service.duration} min)`;
-                    option.setAttribute('data-price', service.price);
-                    option.setAttribute('data-duration', service.duration);
-                    serviceSelect.appendChild(option);
-                });
-                
-                businessServices = services;
-            }
-
-            // Load stylists
-            const stylists = await loadBusinessStylists(currentBusinessId);
-            const stylistSelect = document.getElementById('stylist');
-            
-            if (stylistSelect) {
-                stylistSelect.innerHTML = '<option value="">Any available stylist</option>';
-                
-                stylists
-                    .filter(stylist => stylist.is_active)
-                    .forEach(stylist => {
-                        const option = document.createElement('option');
-                        option.value = stylist.id;
-                        option.textContent = stylist.name + (stylist.specialization ? ` - ${stylist.specialization}` : '');
-                        stylistSelect.appendChild(option);
-                    });
-            }
-
-        } catch (error) {
-            console.error('Error loading services/stylists for booking:', error);
-        }
-    }
-    // Service Management Functions
-    function initServiceManagement() {
-        const addServiceBtn = document.getElementById('addServiceBtn');
-        const serviceModal = document.getElementById('serviceModal');
-        const serviceForm = document.getElementById('serviceForm');
-        const cancelServiceBtn = document.getElementById('cancelService');
-        const closeModalBtn = serviceModal.querySelector('.close');
-
-        // Open modal when Add Service button is clicked
-        if (addServiceBtn) {
-            addServiceBtn.addEventListener('click', function() {
-                openServiceModal();
-            });
-        }
-
-        // Close modal when close button is clicked
-        if (closeModalBtn) {
-            closeModalBtn.addEventListener('click', function() {
-                closeServiceModal();
-            });
-        }
-
-        // Close modal when cancel button is clicked
-        if (cancelServiceBtn) {
-            cancelServiceBtn.addEventListener('click', function() {
-                closeServiceModal();
-            });
-        }
-
-        // Close modal when clicking outside
-        if (serviceModal) {
-            serviceModal.addEventListener('click', function(e) {
-                if (e.target === serviceModal) {
-                    closeServiceModal();
-                }
-            });
-        }
-
-        // Handle form submission
-        if (serviceForm) {
-            serviceForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                await handleServiceFormSubmit();
-            });
-        }
-
-        // Load services when page loads
-        loadServices();
+async function loadServicesForBooking() {
+    if (!currentBusinessId) {
+        console.error('No business ID available');
+        return;
     }
 
-    function openServiceModal(service = null) {
-        const modal = document.getElementById('serviceModal');
-        const modalTitle = document.getElementById('serviceModalTitle');
-        const form = document.getElementById('serviceForm');
-        const editingServiceIdEl = document.getElementById('editingServiceId');
-
-        if (service) {
-            // Editing existing service
-            modalTitle.textContent = 'Edit Service';
-            document.getElementById('serviceName').value = service.name;
-            document.getElementById('serviceDescription').value = service.description || '';
-            document.getElementById('servicePrice').value = service.price;
-            document.getElementById('serviceDuration').value = service.duration;
-            if (editingServiceIdEl) editingServiceIdEl.value = service.id;
-        } else {
-            // Adding new service
-            modalTitle.textContent = 'Add New Service';
-            form.reset();
-            if (editingServiceIdEl) editingServiceIdEl.value = '';
-        }
-
-        // Show modal
-        if (modal) {
-            modal.classList.remove('hidden');
-            modal.style.display = 'flex';
-        }
-    }
-
-    function closeServiceModal() {
-        const modal = document.getElementById('serviceModal');
-        if (modal) {
-            modal.classList.add('hidden');
-            modal.style.display = 'none';
-        }
-    }
-
-    async function handleServiceFormSubmit() {
-        const form = document.getElementById('serviceForm');
-        const submitBtn = form.querySelector('button[type="submit"]');
-        const originalText = submitBtn.textContent;
+    try {
+        // Load services
+        const services = await loadBusinessServices(currentBusinessId);
+        const serviceSelect = document.getElementById('service');
         
-        submitBtn.textContent = 'Saving...';
-        submitBtn.disabled = true;
-
-        try {
-            const serviceData = {
-                businessId: currentBusinessId,
-                name: document.getElementById('serviceName').value,
-                description: document.getElementById('serviceDescription').value,
-                price: parseFloat(document.getElementById('servicePrice').value),
-                duration: parseInt(document.getElementById('serviceDuration').value)
-            };
-
-            const editingServiceIdEl = document.getElementById('editingServiceId');
-            const editingServiceId = editingServiceIdEl ? editingServiceIdEl.value : '';
-            let result;
-
-            if (editingServiceId) {
-                // Update existing service
-                result = await updateService(editingServiceId, serviceData);
-            } else {
-                // Create new service
-                result = await createService(serviceData);
-            }
-
-            if (result) {
-                closeServiceModal();
-                await loadServices(); // Reload the services list
-                showNotification('Service saved successfully!', 'success');
-            }
-
-        } catch (error) {
-            console.error('Error saving service:', error);
-            showNotification('Error saving service: ' + error.message, 'error');
-        } finally {
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
-        }
-    }
-
-    async function loadServices() {
-        const servicesList = document.getElementById('servicesList');
-        if (!servicesList) return;
-
-        try {
-            servicesList.innerHTML = '<div class="loading">Loading services...</div>';
-            
-            const services = await loadBusinessServices(currentBusinessId);
-            
-            if (services.length === 0) {
-                servicesList.innerHTML = `
-                    <div class="no-services">
-                        <p>No services added yet.</p>
-                        <p>Click "Add New Service" to get started!</p>
-                    </div>
-                `;
-                return;
-            }
-
-            servicesList.innerHTML = '';
+        if (serviceSelect) {
+            serviceSelect.innerHTML = '<option value="">Choose a service</option>';
             
             services.forEach(service => {
-                const serviceItem = document.createElement('div');
-                serviceItem.className = 'service-item';
-                serviceItem.innerHTML = `
-                    <div class="service-info">
-                        <h3>${service.name}</h3>
-                        ${service.description ? `<p>${service.description}</p>` : ''}
-                        <div class="service-meta">
-                            <span class="service-price">R${service.price}</span>
-                            <span class="service-duration">${service.duration} minutes</span>
-                        </div>
-                    </div>
-                    <div class="service-actions">
-                        <button class="service-action-btn service-edit" onclick="editService('${service.id}')">
-                            Edit
-                        </button>
-                        <button class="service-action-btn service-delete" onclick="deleteService('${service.id}')">
-                            Delete
-                        </button>
-                    </div>
-                `;
-                servicesList.appendChild(serviceItem);
+                const option = document.createElement('option');
+                option.value = service.id;
+                option.textContent = `${service.name} - R${service.price} (${service.duration} min)`;
+                option.setAttribute('data-price', service.price);
+                option.setAttribute('data-duration', service.duration);
+                serviceSelect.appendChild(option);
             });
-
-        } catch (error) {
-            console.error('Error loading services:', error);
-            servicesList.innerHTML = '<div class="error">Error loading services. Please try again.</div>';
-        }
-    }
-
-    async function editService(serviceId) {
-        try {
-            const services = await loadBusinessServices(currentBusinessId);
-            const service = services.find(s => s.id === serviceId);
             
-            if (service) {
-                openServiceModal(service);
-            } else {
-                throw new Error('Service not found');
-            }
-        } catch (error) {
-            console.error('Error editing service:', error);
-            showNotification('Error loading service details', 'error');
-        }
-    }
-
-    async function deleteService(serviceId) {
-        if (!confirm('Are you sure you want to delete this service? This action cannot be undone.')) {
-            return;
+            businessServices = services;
         }
 
-        try {
-            const serviceItem = document.querySelector(`[onclick="editService('${serviceId}')"]`)?.closest('.service-item');
-            if (serviceItem) {
-                serviceItem.classList.add('loading');
-            }
-
-            const response = await fetch(`/api/services?id=${serviceId}`, {
-                method: 'DELETE'
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                await loadServices(); // Reload the services list
-                showNotification('Service deleted successfully!', 'success');
-            } else {
-                throw new Error(result.error || 'Failed to delete service');
-            }
-
-        } catch (error) {
-            console.error('Error deleting service:', error);
-            showNotification('Error deleting service: ' + error.message, 'error');
-        }
-    }
-
-    async function updateService(serviceId, serviceData) {
-        try {
-            const response = await fetch('/api/services', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    id: serviceId,
-                    ...serviceData
-                })
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                return result.service;
-            } else {
-                throw new Error(result.error || 'Failed to update service');
-            }
-        } catch (error) {
-            console.error('Error updating service:', error);
-            throw error;
-        }
-    }
-    // Stylist Management Functions
-    function initStylistManagement() {
-        const addStylistBtn = document.getElementById('addStylistBtn');
-        const stylistModal = document.getElementById('stylistModal');
-        const stylistForm = document.getElementById('stylistForm');
-        const cancelStylistBtn = document.getElementById('cancelStylist');
-        const closeModalBtn = stylistModal.querySelector('.close');
-
-        // Open modal when Add Stylist button is clicked
-        if (addStylistBtn) {
-            addStylistBtn.addEventListener('click', function() {
-                openStylistModal();
-            });
-        }
-
-        // Close modal when close button is clicked
-        if (closeModalBtn) {
-            closeModalBtn.addEventListener('click', function() {
-                closeStylistModal();
-            });
-        }
-
-        // Close modal when cancel button is clicked
-        if (cancelStylistBtn) {
-            cancelStylistBtn.addEventListener('click', function() {
-                closeStylistModal();
-            });
-        }
-
-        // Close modal when clicking outside
-        if (stylistModal) {
-            stylistModal.addEventListener('click', function(e) {
-                if (e.target === stylistModal) {
-                    closeStylistModal();
-                }
-            });
-        }
-
-        // Handle form submission
-        if (stylistForm) {
-            stylistForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                await handleStylistFormSubmit();
-            });
-        }
-
-        // Load stylists when page loads
-        loadStylists();
-    }
-
-    function openStylistModal(stylist = null) {
-        const modal = document.getElementById('stylistModal');
-        const modalTitle = document.getElementById('stylistModalTitle');
-        const form = document.getElementById('stylistForm');
-        const editingStylistId = document.getElementById('editingStylistId');
-
-        if (stylist) {
-            // Editing existing stylist
-            modalTitle.textContent = 'Edit Stylist';
-            document.getElementById('stylistName').value = stylist.name;
-            document.getElementById('stylistEmail').value = stylist.email || '';
-            document.getElementById('stylistPhone').value = stylist.phone || '';
-            document.getElementById('stylistSpecialization').value = stylist.specialization || '';
-            document.getElementById('stylistBio').value = stylist.bio || '';
-            document.getElementById('stylistImageUrl').value = stylist.image_url || '';
-            document.getElementById('stylistActive').checked = stylist.is_active !== false;
-            editingStylistId.value = stylist.id;
-        } else {
-            // Adding new stylist
-            modalTitle.textContent = 'Add New Stylist';
-            form.reset();
-            document.getElementById('stylistActive').checked = true;
-            editingStylistId.value = '';
-        }
-
-        modal.classList.remove('hidden');
-    }
-
-    function closeStylistModal() {
-        const modal = document.getElementById('stylistModal');
-        modal.classList.add('hidden');
-    }
-
-    async function handleStylistFormSubmit() {
-        const form = document.getElementById('stylistForm');
-        const submitBtn = form.querySelector('button[type="submit"]');
-        const originalText = submitBtn.textContent;
+        // Load stylists
+        const stylists = await loadBusinessStylists(currentBusinessId);
+        const stylistSelect = document.getElementById('stylist');
         
-        submitBtn.textContent = 'Saving...';
-        submitBtn.disabled = true;
-
-        try {
-            const stylistData = {
-                businessId: currentBusinessId,
-                name: document.getElementById('stylistName').value,
-                email: document.getElementById('stylistEmail').value,
-                phone: document.getElementById('stylistPhone').value,
-                specialization: document.getElementById('stylistSpecialization').value,
-                bio: document.getElementById('stylistBio').value,
-                imageUrl: document.getElementById('stylistImageUrl').value,
-                isActive: document.getElementById('stylistActive').checked
-            };
-
-            const editingStylistId = document.getElementById('editingStylistId').value;
-            let result;
-
-            if (editingStylistId) {
-                // Update existing stylist
-                result = await updateStylist(editingStylistId, stylistData);
-            } else {
-                // Create new stylist
-                result = await createStylist(stylistData);
-            }
-
-            if (result) {
-                closeStylistModal();
-                await loadStylists(); // Reload the stylists list
-                showNotification('Stylist saved successfully!', 'success');
-            }
-
-        } catch (error) {
-            console.error('Error saving stylist:', error);
-            showNotification('Error saving stylist: ' + error.message, 'error');
-        } finally {
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
+        if (stylistSelect) {
+            stylistSelect.innerHTML = '<option value="">Any available stylist</option>';
+            
+            stylists
+                .filter(stylist => stylist.is_active)
+                .forEach(stylist => {
+                    const option = document.createElement('option');
+                    option.value = stylist.id;
+                    option.textContent = stylist.name + (stylist.specialization ? ` - ${stylist.specialization}` : '');
+                    stylistSelect.appendChild(option);
+                });
         }
+
+    } catch (error) {
+        console.error('Error loading services/stylists for booking:', error);
+    }
+}
+
+// Service Management Functions
+function initServiceManagement() {
+    const addServiceBtn = document.getElementById('addServiceBtn');
+    const serviceModal = document.getElementById('serviceModal');
+    const serviceForm = document.getElementById('serviceForm');
+    const cancelServiceBtn = document.getElementById('cancelService');
+    const closeModalBtn = serviceModal?.querySelector('.close');
+
+    // Open modal when Add Service button is clicked
+    if (addServiceBtn) {
+        addServiceBtn.addEventListener('click', function() {
+            openServiceModal();
+        });
     }
 
-    async function loadStylists() {
-        const stylistsList = document.getElementById('stylistsList');
-        if (!stylistsList) return;
-
-        try {
-            stylistsList.innerHTML = '<div class="loading">Loading stylists...</div>';
-            
-            const stylists = await loadBusinessStylists(currentBusinessId);
-            
-            if (stylists.length === 0) {
-                stylistsList.innerHTML = `
-                    <div class="no-stylists">
-                        <p>No stylists added yet.</p>
-                        <p>Click "Add New Stylist" to get started!</p>
-                    </div>
-                `;
-                return;
-            }
-
-            stylistsList.innerHTML = '';
-            
-            stylists.forEach(stylist => {
-                const stylistCard = document.createElement('div');
-                stylistCard.className = 'stylist-card';
-                
-                const firstName = stylist.name.split(' ')[0];
-                const avatarContent = stylist.image_url 
-                    ? `<img src="${stylist.image_url}" alt="${stylist.name}" onerror="this.style.display='none'; this.parentElement.innerHTML='${firstName.charAt(0).toUpperCase()}'">`
-                    : firstName.charAt(0).toUpperCase();
-                
-                stylistCard.innerHTML = `
-                    <div class="stylist-header">
-                        <div class="stylist-avatar ${stylist.image_url ? 'has-image' : ''}">
-                            ${avatarContent}
-                        </div>
-                        <div class="stylist-info">
-                            <div class="stylist-name">${stylist.name}</div>
-                            ${stylist.specialization ? `<div class="stylist-specialization">${stylist.specialization}</div>` : ''}
-                            ${stylist.email ? `<div class="stylist-contact">${stylist.email}</div>` : ''}
-                            ${stylist.phone ? `<div class="stylist-contact">${stylist.phone}</div>` : ''}
-                            <div class="stylist-status ${stylist.is_active ? 'active' : 'inactive'}">
-                                <span class="stylist-status-dot"></span>
-                                ${stylist.is_active ? 'Active' : 'Inactive'}
-                            </div>
-                        </div>
-                    </div>
-                    ${stylist.bio ? `<div class="stylist-bio">${stylist.bio}</div>` : ''}
-                    <div class="stylist-actions">
-                        <button class="stylist-action-btn stylist-edit" onclick="editStylist('${stylist.id}')">
-                            Edit
-                        </button>
-                        <button class="stylist-action-btn stylist-delete" onclick="deleteStylist('${stylist.id}')">
-                            Delete
-                        </button>
-                    </div>
-                `;
-                stylistsList.appendChild(stylistCard);
-            });
-
-        } catch (error) {
-            console.error('Error loading stylists:', error);
-            stylistsList.innerHTML = '<div class="error">Error loading stylists. Please try again.</div>';
-        }
+    // Close modal when close button is clicked
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', function() {
+            closeServiceModal();
+        });
     }
 
-    async function editStylist(stylistId) {
-        try {
-            const stylists = await loadBusinessStylists(currentBusinessId);
-            const stylist = stylists.find(s => s.id === stylistId);
-            
-            if (stylist) {
-                openStylistModal(stylist);
-            } else {
-                throw new Error('Stylist not found');
-            }
-        } catch (error) {
-            console.error('Error editing stylist:', error);
-            showNotification('Error loading stylist details', 'error');
-        }
+    // Close modal when cancel button is clicked
+    if (cancelServiceBtn) {
+        cancelServiceBtn.addEventListener('click', function() {
+            closeServiceModal();
+        });
     }
 
-    async function deleteStylist(stylistId) {
-        if (!confirm('Are you sure you want to delete this stylist? This action cannot be undone.')) {
+    // Close modal when clicking outside
+    if (serviceModal) {
+        serviceModal.addEventListener('click', function(e) {
+            if (e.target === serviceModal) {
+                closeServiceModal();
+            }
+        });
+    }
+
+    // Handle form submission
+    if (serviceForm) {
+        serviceForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await handleServiceFormSubmit();
+        });
+    }
+
+    // Load services when page loads
+    loadServices();
+}
+
+function openServiceModal(service = null) {
+    const modal = document.getElementById('serviceModal');
+    const modalTitle = document.getElementById('serviceModalTitle');
+    const form = document.getElementById('serviceForm');
+    const editingServiceIdEl = document.getElementById('editingServiceId');
+
+    if (service) {
+        // Editing existing service
+        modalTitle.textContent = 'Edit Service';
+        document.getElementById('serviceName').value = service.name;
+        document.getElementById('serviceDescription').value = service.description || '';
+        document.getElementById('servicePrice').value = service.price;
+        document.getElementById('serviceDuration').value = service.duration;
+        if (editingServiceIdEl) editingServiceIdEl.value = service.id;
+    } else {
+        // Adding new service
+        modalTitle.textContent = 'Add New Service';
+        form.reset();
+        if (editingServiceIdEl) editingServiceIdEl.value = '';
+    }
+
+    // Show modal
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    }
+}
+
+function closeServiceModal() {
+    const modal = document.getElementById('serviceModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
+}
+
+async function handleServiceFormSubmit() {
+    const form = document.getElementById('serviceForm');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    
+    submitBtn.textContent = 'Saving...';
+    submitBtn.disabled = true;
+
+    try {
+        const serviceData = {
+            businessId: currentBusinessId,
+            name: document.getElementById('serviceName').value,
+            description: document.getElementById('serviceDescription').value,
+            price: parseFloat(document.getElementById('servicePrice').value),
+            duration: parseInt(document.getElementById('serviceDuration').value)
+        };
+
+        const editingServiceIdEl = document.getElementById('editingServiceId');
+        const editingServiceId = editingServiceIdEl ? editingServiceIdEl.value : '';
+        let result;
+
+        if (editingServiceId) {
+            // Update existing service
+            result = await updateService(editingServiceId, serviceData);
+        } else {
+            // Create new service
+            result = await createService(serviceData);
+        }
+
+        if (result) {
+            closeServiceModal();
+            await loadServices(); // Reload the services list
+            showNotification('Service saved successfully!', 'success');
+        }
+
+    } catch (error) {
+        console.error('Error saving service:', error);
+        showNotification('Error saving service: ' + error.message, 'error');
+    } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+async function loadServices() {
+    const servicesList = document.getElementById('servicesList');
+    if (!servicesList) return;
+
+    try {
+        servicesList.innerHTML = '<div class="loading">Loading services...</div>';
+        
+        const services = await loadBusinessServices(currentBusinessId);
+        
+        if (services.length === 0) {
+            servicesList.innerHTML = `
+                <div class="no-services">
+                    <p>No services added yet.</p>
+                    <p>Click "Add New Service" to get started!</p>
+                </div>
+            `;
             return;
         }
 
-        try {
-            const stylistCard = document.querySelector(`[onclick="editStylist('${stylistId}')"]`)?.closest('.stylist-card');
-            if (stylistCard) {
-                stylistCard.classList.add('loading');
-            }
+        servicesList.innerHTML = '';
+        
+        services.forEach(service => {
+            const serviceItem = document.createElement('div');
+            serviceItem.className = 'service-item';
+            serviceItem.innerHTML = `
+                <div class="service-info">
+                    <h3>${service.name}</h3>
+                    ${service.description ? `<p>${service.description}</p>` : ''}
+                    <div class="service-meta">
+                        <span class="service-price">R${service.price}</span>
+                        <span class="service-duration">${service.duration} minutes</span>
+                    </div>
+                </div>
+                <div class="service-actions">
+                    <button class="service-action-btn service-edit" onclick="editService('${service.id}')">
+                        Edit
+                    </button>
+                    <button class="service-action-btn service-delete" onclick="deleteService('${service.id}')">
+                        Delete
+                    </button>
+                </div>
+            `;
+            servicesList.appendChild(serviceItem);
+        });
 
-            const response = await fetch(`/api/stylists?id=${stylistId}`, {
-                method: 'DELETE'
-            });
+    } catch (error) {
+        console.error('Error loading services:', error);
+        servicesList.innerHTML = '<div class="error">Error loading services. Please try again.</div>';
+    }
+}
 
-            const result = await response.json();
-
-            if (response.ok) {
-                await loadStylists(); // Reload the stylists list
-                showNotification('Stylist deleted successfully!', 'success');
-            } else {
-                throw new Error(result.error || 'Failed to delete stylist');
-            }
-
-        } catch (error) {
-            console.error('Error deleting stylist:', error);
-            showNotification('Error deleting stylist: ' + error.message, 'error');
+async function editService(serviceId) {
+    try {
+        const services = await loadBusinessServices(currentBusinessId);
+        const service = services.find(s => s.id === serviceId);
+        
+        if (service) {
+            openServiceModal(service);
+        } else {
+            throw new Error('Service not found');
         }
+    } catch (error) {
+        console.error('Error editing service:', error);
+        showNotification('Error loading service details', 'error');
+    }
+}
+
+async function deleteService(serviceId) {
+    if (!confirm('Are you sure you want to delete this service? This action cannot be undone.')) {
+        return;
     }
 
-    // API Functions for Stylists
-    async function loadBusinessStylists(businessId) {
-        try {
-            const response = await fetch(`/api/stylists?businessId=${businessId}`);
-            const result = await response.json();
-            
-            if (response.ok) {
-                return result.stylists || [];
-            } else {
-                console.error('Error loading stylists:', result.error);
-                return [];
+    try {
+        const serviceItem = document.querySelector(`[onclick="editService('${serviceId}')"]`)?.closest('.service-item');
+        if (serviceItem) {
+            serviceItem.classList.add('loading');
+        }
+
+        const response = await fetch(`/api/services?id=${serviceId}`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            await loadServices(); // Reload the services list
+            showNotification('Service deleted successfully!', 'success');
+        } else {
+            throw new Error(result.error || 'Failed to delete service');
+        }
+
+    } catch (error) {
+        console.error('Error deleting service:', error);
+        showNotification('Error deleting service: ' + error.message, 'error');
+    }
+}
+
+async function updateService(serviceId, serviceData) {
+    try {
+        const response = await fetch('/api/services', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id: serviceId,
+                ...serviceData
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            return result.service;
+        } else {
+            throw new Error(result.error || 'Failed to update service');
+        }
+    } catch (error) {
+        console.error('Error updating service:', error);
+        throw error;
+    }
+}
+
+// STYLIST MANAGEMENT FUNCTIONS - COMPLETELY REWRITTEN
+function initStylistManagement() {
+    console.log('Initializing stylist management...');
+    
+    const addStylistBtn = document.getElementById('addStylistBtn');
+    const stylistModal = document.getElementById('stylistModal');
+    const stylistForm = document.getElementById('stylistForm');
+    const cancelStylistBtn = document.getElementById('cancelStylist');
+    const closeModalBtn = stylistModal?.querySelector('.close');
+
+    console.log('Stylist elements found:', {
+        addStylistBtn: !!addStylistBtn,
+        stylistModal: !!stylistModal,
+        stylistForm: !!stylistForm,
+        cancelStylistBtn: !!cancelStylistBtn,
+        closeModalBtn: !!closeModalBtn
+    });
+
+    // Open modal when Add Stylist button is clicked
+    if (addStylistBtn) {
+        addStylistBtn.addEventListener('click', function() {
+            console.log('Add Stylist button clicked');
+            openStylistModal();
+        });
+    } else {
+        console.error('Add Stylist button not found!');
+    }
+
+    // Close modal when close button is clicked
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', function() {
+            closeStylistModal();
+        });
+    }
+
+    // Close modal when cancel button is clicked
+    if (cancelStylistBtn) {
+        cancelStylistBtn.addEventListener('click', function() {
+            closeStylistModal();
+        });
+    }
+
+    // Close modal when clicking outside
+    if (stylistModal) {
+        stylistModal.addEventListener('click', function(e) {
+            if (e.target === stylistModal) {
+                closeStylistModal();
             }
-        } catch (error) {
-            console.error('Error loading stylists:', error);
+        });
+    }
+
+    // Handle form submission
+    if (stylistForm) {
+        stylistForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await handleStylistFormSubmit();
+        });
+    }
+
+    // Load stylists when page loads
+    loadStylists();
+}
+
+function openStylistModal(stylist = null) {
+    console.log('Opening stylist modal...');
+    
+    const modal = document.getElementById('stylistModal');
+    const modalTitle = document.getElementById('stylistModalTitle');
+    const form = document.getElementById('stylistForm');
+    const editingStylistId = document.getElementById('editingStylistId');
+
+    if (!modal) {
+        console.error('Stylist modal not found!');
+        return;
+    }
+
+    if (stylist) {
+        // Editing existing stylist
+        console.log('Editing stylist:', stylist);
+        modalTitle.textContent = 'Edit Stylist';
+        document.getElementById('stylistName').value = stylist.name;
+        document.getElementById('stylistEmail').value = stylist.email || '';
+        document.getElementById('stylistPhone').value = stylist.phone || '';
+        document.getElementById('stylistSpecialization').value = stylist.specialization || '';
+        document.getElementById('stylistBio').value = stylist.bio || '';
+        document.getElementById('stylistImageUrl').value = stylist.image_url || '';
+        document.getElementById('stylistActive').checked = stylist.is_active !== false;
+        if (editingStylistId) editingStylistId.value = stylist.id;
+    } else {
+        // Adding new stylist
+        console.log('Adding new stylist');
+        modalTitle.textContent = 'Add New Stylist';
+        if (form) form.reset();
+        if (document.getElementById('stylistActive')) {
+            document.getElementById('stylistActive').checked = true;
+        }
+        if (editingStylistId) editingStylistId.value = '';
+    }
+
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    console.log('Stylist modal should be visible now');
+}
+
+function closeStylistModal() {
+    const modal = document.getElementById('stylistModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
+}
+
+async function handleStylistFormSubmit() {
+    console.log('Handling stylist form submission...');
+    
+    const form = document.getElementById('stylistForm');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    
+    submitBtn.textContent = 'Saving...';
+    submitBtn.disabled = true;
+
+    try {
+        const stylistData = {
+            businessId: currentBusinessId,
+            name: document.getElementById('stylistName').value,
+            email: document.getElementById('stylistEmail').value,
+            phone: document.getElementById('stylistPhone').value,
+            specialization: document.getElementById('stylistSpecialization').value,
+            bio: document.getElementById('stylistBio').value,
+            imageUrl: document.getElementById('stylistImageUrl').value,
+            isActive: document.getElementById('stylistActive').checked
+        };
+
+        console.log('Stylist data to save:', stylistData);
+
+        const editingStylistId = document.getElementById('editingStylistId').value;
+        let result;
+
+        if (editingStylistId) {
+            // Update existing stylist
+            console.log('Updating stylist with ID:', editingStylistId);
+            result = await updateStylist(editingStylistId, stylistData);
+        } else {
+            // Create new stylist
+            console.log('Creating new stylist');
+            result = await createStylist(stylistData);
+        }
+
+        if (result) {
+            closeStylistModal();
+            await loadStylists(); // Reload the stylists list
+            showNotification('Stylist saved successfully!', 'success');
+        }
+
+    } catch (error) {
+        console.error('Error saving stylist:', error);
+        showNotification('Error saving stylist: ' + error.message, 'error');
+    } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+async function loadStylists() {
+    const stylistsList = document.getElementById('stylistsList');
+    if (!stylistsList) {
+        console.log('Stylists list container not found');
+        return;
+    }
+
+    try {
+        stylistsList.innerHTML = '<div class="loading">Loading stylists...</div>';
+        
+        const stylists = await loadBusinessStylists(currentBusinessId);
+        console.log('Loaded stylists:', stylists);
+        
+        if (stylists.length === 0) {
+            stylistsList.innerHTML = `
+                <div class="no-stylists">
+                    <p>No stylists added yet.</p>
+                    <p>Click "Add New Stylist" to get started!</p>
+                </div>
+            `;
+            return;
+        }
+
+        stylistsList.innerHTML = '';
+        
+        stylists.forEach(stylist => {
+            const stylistCard = document.createElement('div');
+            stylistCard.className = 'stylist-card';
+            
+            const firstName = stylist.name.split(' ')[0];
+            const avatarContent = stylist.image_url 
+                ? `<img src="${stylist.image_url}" alt="${stylist.name}" onerror="this.style.display='none'; this.parentElement.innerHTML='${firstName.charAt(0).toUpperCase()}'">`
+                : firstName.charAt(0).toUpperCase();
+            
+            stylistCard.innerHTML = `
+                <div class="stylist-header">
+                    <div class="stylist-avatar ${stylist.image_url ? 'has-image' : ''}">
+                        ${avatarContent}
+                    </div>
+                    <div class="stylist-info">
+                        <div class="stylist-name">${stylist.name}</div>
+                        ${stylist.specialization ? `<div class="stylist-specialization">${stylist.specialization}</div>` : ''}
+                        ${stylist.email ? `<div class="stylist-contact">${stylist.email}</div>` : ''}
+                        ${stylist.phone ? `<div class="stylist-contact">${stylist.phone}</div>` : ''}
+                        <div class="stylist-status ${stylist.is_active ? 'active' : 'inactive'}">
+                            <span class="stylist-status-dot"></span>
+                            ${stylist.is_active ? 'Active' : 'Inactive'}
+                        </div>
+                    </div>
+                </div>
+                ${stylist.bio ? `<div class="stylist-bio">${stylist.bio}</div>` : ''}
+                <div class="stylist-actions">
+                    <button class="stylist-action-btn stylist-edit" onclick="editStylist('${stylist.id}')">
+                        Edit
+                    </button>
+                    <button class="stylist-action-btn stylist-delete" onclick="deleteStylist('${stylist.id}')">
+                        Delete
+                    </button>
+                </div>
+            `;
+            stylistsList.appendChild(stylistCard);
+        });
+
+    } catch (error) {
+        console.error('Error loading stylists:', error);
+        stylistsList.innerHTML = '<div class="error">Error loading stylists. Please try again.</div>';
+    }
+}
+
+async function editStylist(stylistId) {
+    try {
+        const stylists = await loadBusinessStylists(currentBusinessId);
+        const stylist = stylists.find(s => s.id === stylistId);
+        
+        if (stylist) {
+            openStylistModal(stylist);
+        } else {
+            throw new Error('Stylist not found');
+        }
+    } catch (error) {
+        console.error('Error editing stylist:', error);
+        showNotification('Error loading stylist details', 'error');
+    }
+}
+
+async function deleteStylist(stylistId) {
+    if (!confirm('Are you sure you want to delete this stylist? This action cannot be undone.')) {
+        return;
+    }
+
+    try {
+        const stylistCard = document.querySelector(`[onclick="editStylist('${stylistId}')"]`)?.closest('.stylist-card');
+        if (stylistCard) {
+            stylistCard.classList.add('loading');
+        }
+
+        const response = await fetch(`/api/stylists?id=${stylistId}`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            await loadStylists(); // Reload the stylists list
+            showNotification('Stylist deleted successfully!', 'success');
+        } else {
+            throw new Error(result.error || 'Failed to delete stylist');
+        }
+
+    } catch (error) {
+        console.error('Error deleting stylist:', error);
+        showNotification('Error deleting stylist: ' + error.message, 'error');
+    }
+}
+
+// API Functions for Stylists
+async function loadBusinessStylists(businessId) {
+    try {
+        const response = await fetch(`/api/stylists?businessId=${businessId}`);
+        const result = await response.json();
+        
+        if (response.ok) {
+            return result.stylists || [];
+        } else {
+            console.error('Error loading stylists:', result.error);
             return [];
         }
+    } catch (error) {
+        console.error('Error loading stylists:', error);
+        return [];
     }
+}
 
-    async function createStylist(stylistData) {
-        try {
-            const response = await fetch('/api/stylists', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(stylistData)
-            });
+async function createStylist(stylistData) {
+    try {
+        const response = await fetch('/api/stylists', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(stylistData)
+        });
 
-            const result = await response.json();
+        const result = await response.json();
 
-            if (response.ok) {
-                return result.stylist;
-            } else {
-                throw new Error(result.error || 'Failed to create stylist');
-            }
-        } catch (error) {
-            console.error('Error creating stylist:', error);
-            throw error;
-        }
-    }
-
-    async function updateStylist(stylistId, stylistData) {
-        try {
-            const response = await fetch('/api/stylists', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    id: stylistId,
-                    ...stylistData
-                })
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                return result.stylist;
-            } else {
-                throw new Error(result.error || 'Failed to update stylist');
-            }
-        } catch (error) {
-            console.error('Error updating stylist:', error);
-            throw error;
-        }
-    }
-    // Utility function for notifications
-    function showNotification(message, type = 'info') {
-        // Create notification element
-        const notification = document.createElement('div');
-        notification.className = `notification notification-${type}`;
-        notification.textContent = message;
-        
-        // Add styles for notification
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 5px;
-            color: white;
-            font-weight: 500;
-            z-index: 10000;
-            animation: slideIn 0.3s ease;
-            max-width: 300px;
-        `;
-        
-        if (type === 'success') {
-            notification.style.backgroundColor = '#4caf50';
-        } else if (type === 'error') {
-            notification.style.backgroundColor = '#f44336';
+        if (response.ok) {
+            return result.stylist;
         } else {
-            notification.style.backgroundColor = '#ff9800';
+            throw new Error(result.error || 'Failed to create stylist');
         }
-        
-        document.body.appendChild(notification);
-        
-        // Remove notification after 3 seconds
-        setTimeout(() => {
-            notification.style.animation = 'slideOut 0.3s ease';
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 300);
-        }, 3000);
+    } catch (error) {
+        console.error('Error creating stylist:', error);
+        throw error;
     }
+}
 
-    // Add these animations to your CSS
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
+async function updateStylist(stylistId, stylistData) {
+    try {
+        const response = await fetch('/api/stylists', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id: stylistId,
+                ...stylistData
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            return result.stylist;
+        } else {
+            throw new Error(result.error || 'Failed to update stylist');
         }
-        
-        @keyframes slideOut {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-        }
+    } catch (error) {
+        console.error('Error updating stylist:', error);
+        throw error;
+    }
+}
+
+// Utility function for notifications
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    
+    // Add styles for notification
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 5px;
+        color: white;
+        font-weight: 500;
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+        max-width: 300px;
     `;
-    document.head.appendChild(style);
+    
+    if (type === 'success') {
+        notification.style.backgroundColor = '#4caf50';
+    } else if (type === 'error') {
+        notification.style.backgroundColor = '#f44336';
+    } else {
+        notification.style.backgroundColor = '#ff9800';
+    }
+    
+    document.body.appendChild(notification);
+    
+    // Remove notification after 3 seconds
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Add these animations to your CSS
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(style);
+
 async function handleAppointmentBooking(appointmentData) {
     try {
         const response = await fetch('/api/appointments', {
@@ -1369,7 +1409,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Show business login tab by default if no business ID
-            document.querySelector('[data-tab="business"]').click();
+            const businessTab = document.querySelector('[data-tab="business"]');
+            if (businessTab) businessTab.click();
         } else {
             // Load business info if business ID is present
             loadBusinessInfo();
@@ -1431,100 +1472,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
-// Customer Booking Functions
-function initCustomerBooking() {
-    const userForm = document.getElementById('userForm');
-    const appointmentForm = document.getElementById('appointmentForm');
-    const bookAnotherBtn = document.getElementById('bookAnother');
-    
-    // Get business ID from URL
-    const urlParams = new URLSearchParams(window.location.search);
-    currentBusinessId = urlParams.get('business');
-    
-    if (!currentBusinessId) {
-        alert('Invalid booking link');
-        return;
-    }
-    
-    // Load business information
-    loadBusinessInfo();
-    
-    // User form submission
-    if (userForm) {
-        userForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const userData = {
-                businessId: currentBusinessId,
-                name: document.getElementById('userName').value,
-                email: document.getElementById('userEmail').value,
-                phone: document.getElementById('userPhone').value
-            };
-            
-            try {
-                currentUserId = userData.email;
-                
-                document.getElementById('userInfoForm').classList.add('hidden');
-                document.getElementById('bookingForm').classList.remove('hidden');
-                
-                loadServices();
-            } catch (error) {
-                alert('Error: ' + error.message);
-            }
-        });
-    }
-    
-    // Appointment form submission
-    if (appointmentForm) {
-        appointmentForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const appointmentData = {
-                businessId: currentBusinessId,
-                userId: currentUserId,
-                service: document.getElementById('service').value,
-                appointmentDate: document.getElementById('appointmentDate').value,
-                notes: document.getElementById('notes').value
-            };
-            
-            try {
-                const response = await fetch('/api/appointments', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(appointmentData)
-                });
-                
-                const result = await response.json();
-                
-                if (response.ok) {
-                    document.getElementById('bookingForm').classList.add('hidden');
-                    document.getElementById('confirmationMessage').classList.remove('hidden');
-                } else {
-                    alert('Error: ' + result.error);
-                }
-            } catch (error) {
-                alert('Error booking appointment: ' + error.message);
-            }
-        });
-    }
-    
-    // Book another appointment
-    if (bookAnotherBtn) {
-        bookAnotherBtn.addEventListener('click', function() {
-            document.getElementById('confirmationMessage').classList.add('hidden');
-            document.getElementById('bookingForm').classList.remove('hidden');
-            document.getElementById('appointmentForm').reset();
-        });
-    }
-}
-
-function loadBusinessInfo() {
-    // In a real implementation, we would fetch business details from the API
-    document.getElementById('businessTitle').textContent = "Salon Booking";
-}
-
 
 // Business Dashboard Functions
 function initializeDashboard(businessUser) {
@@ -1535,61 +1482,6 @@ function initializeDashboard(businessUser) {
     const owner = document.getElementById('dashboardOwnerName');
     if (owner) owner.textContent = (businessUser.name || '').split(' ')[0] || 'Owner';
 }
-// function initStylistsModal() {
-//     const stylistsModal = document.getElementById('stylistsModal');
-//     const openBtn = document.getElementById('menuStylists');
-//     const closeX = document.getElementById('closeStylistsModal');
-//     const closeBtn = document.getElementById('closeStylistsBtn');
-//     const addBtn = document.getElementById('addStylistBtn');
-//     const nameInput = document.getElementById('newStylistName');
-//     const list = document.getElementById('stylistsList');
-
-//     if (openBtn && stylistsModal) {
-//         openBtn.addEventListener('click', () => {
-//             stylistsModal.style.display = 'flex';
-//         });
-//     }
-
-//     [closeX, closeBtn].forEach(btn => {
-//         if (btn && stylistsModal) {
-//             btn.addEventListener('click', () => {
-//                 stylistsModal.style.display = 'none';
-//             });
-//         }
-//     });
-
-//     window.addEventListener('click', function(event) {
-//         if (event.target === stylistsModal) {
-//             stylistsModal.style.display = 'none';
-//         }
-//     });
-
-//     if (addBtn && list && nameInput) {
-//         addBtn.addEventListener('click', function() {
-//             const val = nameInput.value.trim();
-//             if (!val) return;
-//             const wrapper = document.createElement('div');
-//             wrapper.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid #f0f0f0;';
-//             wrapper.innerHTML = `<div>${val}</div><button class="action-btn btn-cancel">Remove</button>`;
-//             list.appendChild(wrapper);
-//             nameInput.value = '';
-//             const removeBtn = wrapper.querySelector('.btn-cancel');
-//             removeBtn.addEventListener('click', function() {
-//                 if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
-//             });
-//         });
-//     }
-
-//     // Attach remove to existing buttons
-//     if (list) {
-//         list.querySelectorAll('.btn-cancel').forEach(btn => {
-//             btn.addEventListener('click', function() {
-//                 const item = this.closest('div');
-//                 if (item && item.parentNode) item.parentNode.removeChild(item);
-//             });
-//         });
-//     }
-// }
 
 function initBusinessDashboard() {
     const refreshBtn = document.getElementById('refreshBtn');
@@ -1617,11 +1509,13 @@ function initBusinessDashboard() {
         const options = { year: 'numeric', month: 'long', day: 'numeric' };
         currentDateEl.textContent = now.toLocaleDateString('en-US', options);
     }
-     // Initialize service management
+    
+    // Initialize service management
     initServiceManagement();
     
     // Initialize stylist management
     initStylistManagement();
+    
     // Logout
     const logoutEl = document.querySelector('.logout-btn');
     if (logoutEl) {
@@ -1672,8 +1566,6 @@ function initBusinessDashboard() {
     document.querySelectorAll('.close-modal').forEach(btn => {
         btn.addEventListener('click', () => {
             if (confirmationModal) confirmationModal.style.display = 'none';
-            const stylistsModal = document.getElementById('stylistsModal');
-            if (stylistsModal) stylistsModal.style.display = 'none';
         });
     });
 
