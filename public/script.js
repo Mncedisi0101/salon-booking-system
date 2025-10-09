@@ -1345,7 +1345,6 @@ document.addEventListener('DOMContentLoaded', function() {
         initBusinessAuthentication();
         initBusinessRegistration();
         handleBusinessLoginRedirect(); 
-        initStylistManagement();
     }
     
     // Customer Booking Page
@@ -1421,7 +1420,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadBusinessData();
                 loadAppointments();
                 loadServices(); // Load services when dashboard loads
-                initServiceManagement(); // Initialize service management UI
                 loadStylists(); // Load stylists when dashboard loads
             } else {
                 alert('Access denied');
