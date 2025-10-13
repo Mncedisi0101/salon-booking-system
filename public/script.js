@@ -1,5 +1,3 @@
-// const appointments = require("../api/appointments");
-
 // Global variables
 let currentBusinessId = null;
 let currentUserId = null;
@@ -10,6 +8,7 @@ let userType = null; // 'customer' or 'business'
 let notifications = JSON.parse(localStorage.getItem('businessNotifications') || '[]');
 let currentPage = 1;
 const appointmentsPerPage = 10;
+
 
 // Business Registration Functions
 function initBusinessRegistration() {
@@ -616,196 +615,7 @@ async function handleCustomerRegistration() {
         submitBtn.disabled = false;
     }
 }
-// Function for appointment booking form
-function initNotificationSystem() {
-    const notificationBtn = document.getElementById('notificationBtn');
-    const notificationPanel = document.getElementById('notificationPanel');
-    const clearNotificationsBtn = document.getElementById('clearNotifications');
-    
-    if (notificationBtn && notificationPanel) {
-        notificationBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            notificationPanel.classList.toggle('active');
-            markAllNotificationsAsRead();
-            updateNotificationBadge();
-        });
-        
-        // Close notification panel when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!notificationPanel.contains(e.target) && !notificationBtn.contains(e.target)) {
-                notificationPanel.classList.remove('active');
-            }
-        });
-    }
-    
-    if (clearNotificationsBtn) {
-        clearNotificationsBtn.addEventListener('click', clearAllNotifications);
-    }
-    
-    updateNotificationDisplay();
-}
-function addNotification(title, message, type = 'info') {
-    const notification = {
-        id: Date.now().toString(),
-        title,
-        message,
-        type,
-        timestamp: new Date().toISOString(),
-        read: false
-    };
-    
-    notifications.unshift(notification);
-    if (notifications.length > 50) {
-        notifications = notifications.slice(0, 50);
-    }
-    
-    localStorage.setItem('businessNotifications', JSON.stringify(notifications));
-    updateNotificationDisplay();
-    updateNotificationBadge();
-    
-    // Show desktop notification if supported
-    if ("Notification" in window && Notification.permission === "granted") {
-        new Notification(title, { body: message, icon: '/favicon.ico' });
-    }
-}
-function updateNotificationDisplay() {
-    const notificationList = document.getElementById('notificationList');
-    if (!notificationList) return;
-    
-    if (notifications.length === 0) {
-        notificationList.innerHTML = `
-            <div class="no-notifications">
-                <i class="fas fa-bell-slash" style="font-size: 24px; margin-bottom: 10px;"></i>
-                <p>No new notifications</p>
-            </div>
-        `;
-        return;
-    }
-    
-    notificationList.innerHTML = notifications.map(notification => `
-        <div class="notification-item ${notification.read ? '' : 'unread'}" 
-             onclick="handleNotificationClick('${notification.id}')">
-            <div class="notification-title">${notification.title}</div>
-            <div class="notification-message">${notification.message}</div>
-            <div class="notification-time">${formatTimeAgo(notification.timestamp)}</div>
-        </div>
-    `).join('');
-}
-function handleNotificationClick(notificationId) {
-    const notification = notifications.find(n => n.id === notificationId);
-    if (notification) {
-        notification.read = true;
-        localStorage.setItem('businessNotifications', JSON.stringify(notifications));
-        updateNotificationDisplay();
-        updateNotificationBadge();
-        
-        // Handle notification action
-        if (notification.type === 'new_booking') {
-            document.getElementById('notificationPanel').classList.remove('active');
-            // Scroll to appointments section
-            document.getElementById('appointmentsSection').scrollIntoView({ behavior: 'smooth' });
-        }
-    }
-}
-function markAllNotificationsAsRead() {
-    notifications.forEach(notification => {
-        notification.read = true;
-    });
-    localStorage.setItem('businessNotifications', JSON.stringify(notifications));
-    updateNotificationDisplay();
-    updateNotificationBadge();
-}
-
-function clearAllNotifications() {
-    if (confirm('Are you sure you want to clear all notifications?')) {
-        notifications = [];
-        localStorage.setItem('businessNotifications', JSON.stringify(notifications));
-        updateNotificationDisplay();
-        updateNotificationBadge();
-    }
-}
-function updateNotificationBadge() {
-    const badge = document.getElementById('headerNotificationBadge');
-    if (!badge) return;
-    
-    const unreadCount = notifications.filter(n => !n.read).length;
-    badge.textContent = unreadCount > 99 ? '99+' : unreadCount.toString();
-    badge.style.display = unreadCount > 0 ? 'flex' : 'none';
-}
-
-function formatTimeAgo(timestamp) {
-    const now = new Date();
-    const time = new Date(timestamp);
-    const diffInSeconds = Math.floor((now - time) / 1000);
-    
-    if (diffInSeconds < 60) return 'Just now';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    return `${Math.floor(diffInSeconds / 86400)}d ago`;
-}
-// Enhanced Appointments Management
-function initEnhancedAppointments() {
-    // Date range filter with null checks
-    const dateRange = document.getElementById('dateRange');
-    const customDateRange = document.getElementById('customDateRange');
-    const customDateRangeEnd = document.getElementById('customDateRangeEnd');
-    
-    if (dateRange && customDateRange && customDateRangeEnd) {
-        dateRange.addEventListener('change', function() {
-            if (this.value === 'custom') {
-                customDateRange.style.display = 'flex';
-                customDateRangeEnd.style.display = 'flex';
-            } else {
-                customDateRange.style.display = 'none';
-                customDateRangeEnd.style.display = 'none';
-                loadAppointments();
-            }
-        });
-    }
-    
-    // Custom date range listeners with null checks
-    const startDate = document.getElementById('startDate');
-    const endDate = document.getElementById('endDate');
-    if (startDate && endDate) {
-        startDate.addEventListener('change', loadAppointments);
-        endDate.addEventListener('change', loadAppointments);
-    }
-    
-    // Export functionality with null check
-    const exportBtn = document.getElementById('exportBtn');
-    if (exportBtn) {
-        exportBtn.addEventListener('click', exportAppointments);
-    }
-    
-    // Pagination with null checks
-    const prevPage = document.getElementById('prevPage');
-    const nextPage = document.getElementById('nextPage');
-    if (prevPage && nextPage) {
-        prevPage.addEventListener('click', () => changePage(-1));
-        nextPage.addEventListener('click', () => changePage(1));
-    }
-    
-    // Select all functionality with null check
-    const selectAll = document.getElementById('selectAll');
-    if (selectAll) {
-        selectAll.addEventListener('change', function() {
-            const checkboxes = document.querySelectorAll('#appointmentsTbody input[type="checkbox"]');
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = this.checked;
-            });
-        });
-    }
-    
-    // Request notification permission
-    if ("Notification" in window) {
-        Notification.requestPermission();
-    }
-}
-function changePage(direction) {
-    currentPage += direction;
-    if (currentPage < 1) currentPage = 1;
-    loadAppointments();
-}
+// Function to display booking form after login/registration
 function showBookingForm(user) {
     document.getElementById('authSection').classList.add('hidden');
     document.getElementById('bookingSection').classList.remove('hidden');
@@ -1893,31 +1703,241 @@ async function loadBusinessData() {
         alert('Error loading business data: ' + error.message);
     }
 }
+// Appointment Booking Functions
+function initNotificationSystem() {
+    const notificationBtn = document.getElementById('notificationBtn');
+    const notificationPanel = document.getElementById('notificationPanel');
+    const clearNotificationsBtn = document.getElementById('clearNotifications');
+    
+    if (notificationBtn && notificationPanel) {
+        notificationBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            notificationPanel.classList.toggle('active');
+            markAllNotificationsAsRead();
+            updateNotificationBadge();
+        });
+        
+        // Close notification panel when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!notificationPanel.contains(e.target) && !notificationBtn.contains(e.target)) {
+                notificationPanel.classList.remove('active');
+            }
+        });
+    }
+    
+    if (clearNotificationsBtn) {
+        clearNotificationsBtn.addEventListener('click', clearAllNotifications);
+    }
+    
+    updateNotificationDisplay();
+}
 
+function addNotification(title, message, type = 'info') {
+    const notification = {
+        id: Date.now().toString(),
+        title,
+        message,
+        type,
+        timestamp: new Date().toISOString(),
+        read: false
+    };
+    
+    notifications.unshift(notification);
+    if (notifications.length > 50) {
+        notifications = notifications.slice(0, 50);
+    }
+    
+    localStorage.setItem('businessNotifications', JSON.stringify(notifications));
+    updateNotificationDisplay();
+    updateNotificationBadge();
+    
+    // Show desktop notification if supported
+    if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(title, { body: message, icon: '/favicon.ico' });
+    }
+}
+
+function updateNotificationDisplay() {
+    const notificationList = document.getElementById('notificationList');
+    if (!notificationList) return;
+    
+    if (notifications.length === 0) {
+        notificationList.innerHTML = `
+            <div class="no-notifications">
+                <i class="fas fa-bell-slash" style="font-size: 24px; margin-bottom: 10px;"></i>
+                <p>No new notifications</p>
+            </div>
+        `;
+        return;
+    }
+    
+    notificationList.innerHTML = notifications.map(notification => `
+        <div class="notification-item ${notification.read ? '' : 'unread'}" 
+             onclick="handleNotificationClick('${notification.id}')">
+            <div class="notification-title">${notification.title}</div>
+            <div class="notification-message">${notification.message}</div>
+            <div class="notification-time">${formatTimeAgo(notification.timestamp)}</div>
+        </div>
+    `).join('');
+}
+
+function handleNotificationClick(notificationId) {
+    const notification = notifications.find(n => n.id === notificationId);
+    if (notification) {
+        notification.read = true;
+        localStorage.setItem('businessNotifications', JSON.stringify(notifications));
+        updateNotificationDisplay();
+        updateNotificationBadge();
+        
+        // Handle notification action
+        if (notification.type === 'new_booking') {
+            document.getElementById('notificationPanel').classList.remove('active');
+            // Scroll to appointments section
+            document.getElementById('appointmentsSection').scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+}
+
+function markAllNotificationsAsRead() {
+    notifications.forEach(notification => {
+        notification.read = true;
+    });
+    localStorage.setItem('businessNotifications', JSON.stringify(notifications));
+    updateNotificationDisplay();
+    updateNotificationBadge();
+}
+
+function clearAllNotifications() {
+    if (confirm('Are you sure you want to clear all notifications?')) {
+        notifications = [];
+        localStorage.setItem('businessNotifications', JSON.stringify(notifications));
+        updateNotificationDisplay();
+        updateNotificationBadge();
+    }
+}
+
+function updateNotificationBadge() {
+    const badge = document.getElementById('headerNotificationBadge');
+    if (!badge) return;
+    
+    const unreadCount = notifications.filter(n => !n.read).length;
+    badge.textContent = unreadCount > 99 ? '99+' : unreadCount.toString();
+    badge.style.display = unreadCount > 0 ? 'flex' : 'none';
+}
+
+function formatTimeAgo(timestamp) {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffInSeconds = Math.floor((now - time) / 1000);
+    
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return `${Math.floor(diffInSeconds / 86400)}d ago`;
+}
+
+//  Appointments Management
+function initEnhancedAppointments() {
+    // Date range filter with null checks
+    const dateRange = document.getElementById('dateRange');
+    const customDateRange = document.getElementById('customDateRange');
+    const customDateRangeEnd = document.getElementById('customDateRangeEnd');
+    
+    if (dateRange && customDateRange && customDateRangeEnd) {
+        dateRange.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customDateRange.style.display = 'flex';
+                customDateRangeEnd.style.display = 'flex';
+            } else {
+                customDateRange.style.display = 'none';
+                customDateRangeEnd.style.display = 'none';
+                loadAppointments();
+            }
+        });
+    }
+    
+    // Custom date range listeners with null checks
+    const startDate = document.getElementById('startDate');
+    const endDate = document.getElementById('endDate');
+    if (startDate && endDate) {
+        startDate.addEventListener('change', loadAppointments);
+        endDate.addEventListener('change', loadAppointments);
+    }
+    
+    // Export functionality with null check
+    const exportBtn = document.getElementById('exportBtn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', exportAppointments);
+    }
+    
+    // Pagination with null checks
+    const prevPage = document.getElementById('prevPage');
+    const nextPage = document.getElementById('nextPage');
+    if (prevPage && nextPage) {
+        prevPage.addEventListener('click', () => changePage(-1));
+        nextPage.addEventListener('click', () => changePage(1));
+    }
+    
+    // Select all functionality with null check
+    const selectAll = document.getElementById('selectAll');
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('#appointmentsTbody input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+    }
+    
+    // Request notification permission
+    if ("Notification" in window) {
+        Notification.requestPermission();
+    }
+}
+function changePage(direction) {
+    currentPage += direction;
+    if (currentPage < 1) currentPage = 1;
+    loadAppointments();
+}
+
+// Consolidated loadAppointments function - REPLACE ALL DUPLICATES WITH THIS
 async function loadAppointments() {
     try {
-        // Get filter values safely with null checks
-        const dateRange = document.getElementById('dateRange');
-        const startDate = document.getElementById('startDate');
-        const endDate = document.getElementById('endDate');
-        const stylistFilter = document.getElementById('stylistFilter');
-        const statusFilter = document.getElementById('statusFilter');
+        // Get filter values
+        const dateRange = document.getElementById('dateRange')?.value || 'today';
+        const startDate = document.getElementById('startDate')?.value;
+        const endDate = document.getElementById('endDate')?.value;
+        const stylistFilter = document.getElementById('stylistFilter')?.value || 'all';
+        const statusFilter = document.getElementById('statusFilter')?.value || 'all';
+        const dateFilter = document.getElementById('datePicker')?.value;
         
-        let url = `/api/appointments?businessId=${currentBusinessId}&page=${currentPage}&limit=${appointmentsPerPage}`;
+        let url = `/api/appointments?businessId=${currentBusinessId}`;
         
-        // Add filters to URL safely
+        // Add enhanced filters to URL (for business dashboard)
         const params = new URLSearchParams();
         
-        // Date range filter with null checks
-        if (dateRange && dateRange.value === 'custom' && startDate && startDate.value && endDate && endDate.value) {
-            params.append('startDate', startDate.value);
-            params.append('endDate', endDate.value);
-        } else if (dateRange && dateRange.value !== 'custom') {
-            params.append('dateRange', dateRange.value);
+        // Enhanced date range filter
+        if (dateRange === 'custom' && startDate && endDate) {
+            params.append('startDate', startDate);
+            params.append('endDate', endDate);
+        } else if (dateRange !== 'custom' && dateRange) {
+            params.append('dateRange', dateRange);
         }
         
-        if (stylistFilter && stylistFilter.value !== 'all') params.append('stylist', stylistFilter.value);
-        if (statusFilter && statusFilter.value !== 'all') params.append('status', statusFilter.value);
+        // Basic date filter (for backward compatibility)
+        if (dateFilter && !dateRange) {
+            params.append('date', dateFilter);
+        }
+        
+        if (stylistFilter !== 'all') params.append('stylist', stylistFilter);
+        if (statusFilter !== 'all') params.append('status', statusFilter);
+        
+        // Add pagination for enhanced view
+        const appointmentsTbody = document.getElementById('appointmentsTbody');
+        if (appointmentsTbody && document.querySelector('.pagination')) {
+            params.append('page', currentPage);
+            params.append('limit', appointmentsPerPage);
+        }
         
         if (params.toString()) {
             url += '&' + params.toString();
@@ -1927,16 +1947,50 @@ async function loadAppointments() {
         const result = await response.json();
         
         if (response.ok) {
-            displayEnhancedAppointments(result.appointments || []);
-            updateAppointmentSummary(result.appointments || []);
-            updatePagination(result.totalCount || result.appointments.length);
+            const appointments = result.appointments || [];
+            
+            // Use enhanced display if available (business dashboard)
+            if (document.getElementById('appointmentsTbody') && document.querySelector('.table-container')) {
+                displayEnhancedAppointments(appointments);
+                updateAppointmentSummary(appointments);
+                if (result.totalCount !== undefined) {
+                    updatePagination(result.totalCount);
+                }
+            } else {
+                // Use basic display for other pages
+                displayAppointments(appointments);
+            }
+            
+            updateStats(appointments);
+            
         } else {
             console.error('Error loading appointments:', result.error);
+            // Show error in UI
+            const tbody = document.getElementById('appointmentsTbody');
+            const appointmentsList = document.getElementById('appointmentsList');
+            
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px; color: var(--danger);">Error loading appointments</td></tr>`;
+            }
+            if (appointmentsList) {
+                appointmentsList.innerHTML = '<p class="error-message">Error loading appointments</p>';
+            }
         }
     } catch (error) {
         console.error('Error loading appointments:', error);
+        // Show error in UI
+        const tbody = document.getElementById('appointmentsTbody');
+        const appointmentsList = document.getElementById('appointmentsList');
+        
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px; color: var(--danger);">Network error loading appointments</td></tr>`;
+        }
+        if (appointmentsList) {
+            appointmentsList.innerHTML = '<p class="error-message">Network error loading appointments</p>';
+        }
     }
 }
+
 function displayEnhancedAppointments(appointments) {
     const tbody = document.getElementById('appointmentsTbody');
     if (!tbody) return;
@@ -2030,6 +2084,7 @@ function displayEnhancedAppointments(appointments) {
     // Attach event listeners
     attachAppointmentEventListeners();
 }
+
 function updateAppointmentSummary(appointments) {
     const pendingCount = appointments.filter(apt => apt.status === 'pending').length;
     const confirmedCount = appointments.filter(apt => apt.status === 'confirmed').length;
@@ -2058,6 +2113,7 @@ function updatePagination(totalCount) {
         nextPage.disabled = currentPage === totalPages;
     }
 }
+
 function attachAppointmentEventListeners() {
     // Confirm buttons
     document.querySelectorAll('.btn-confirm').forEach(button => {
@@ -2083,6 +2139,7 @@ function attachAppointmentEventListeners() {
         });
     });
 }
+
 async function confirmAppointment(appointmentId) {
     try {
         const response = await fetch('/api/appointments', {
@@ -2102,6 +2159,7 @@ async function confirmAppointment(appointmentId) {
         alert('Error confirming appointment');
     }
 }
+
 async function cancelAppointment(appointmentId) {
     if (!confirm('Are you sure you want to cancel this appointment?')) return;
     
@@ -2123,69 +2181,15 @@ async function cancelAppointment(appointmentId) {
         alert('Error cancelling appointment');
     }
 }
+
 function editAppointment(appointmentId) {
     // Implement edit functionality
-   loadAppointments().then(() => {
-        const appointment = appointments.find(apt => apt.id === appointmentId);
-
-        if (appointment) {
-            // Populate the booking form with appointment details
-            document.getElementById('editAppointmentId').value = appointment.id;
-            document.getElementById('editCustomerName').value = appointment.customers.name;
-            document.getElementById('editService').value = appointment.service;
-            document.getElementById('editStylist').value = appointment.stylist;
-            document.getElementById('editAppointmentDate').value = appointment.appointment_date;
-            document.getElementById('editAppointmentNotes').value = appointment.notes;
-
-            // Show the edit modal
-            document.getElementById('editAppointmentModal').style.display = 'block';
-       } else {
-         alert('Appointment not found');
-         }
-    });
+    alert('Edit appointment: ' + appointmentId);
 }
 
 function exportAppointments() {
     // Implement export functionality
-   loadAppointments().then(() => {
-        if (appointments.length === 0) {
-            alert('No appointments to export');
-            return;
-        }
-
-        const headers = ['Customer Name', 'Service', 'Stylist', 'Appointment Date', 'Phone', 'Email', 'Status', 'Notes'];
-        const rows = appointments.map(apt => {
-            const appointmentDate = new Date(apt.appointment_date);
-            const formattedDate = appointmentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + ' at ' + appointmentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-            const customerName = apt.customers ? apt.customers.name : 'N/A';
-            const phone = apt.customers ? apt.customers.phone : 'N/A';
-            const email = apt.customers ? apt.customers.email : 'N/A';
-            return [
-                customerName,
-                apt.service,
-                apt.stylist || 'Not assigned',
-                formattedDate,
-                phone,
-                email,
-                apt.status.charAt(0).toUpperCase() + apt.status.slice(1),
-                apt.notes || ''
-            ];
-        });
-
-        let csvContent = "data:text/csv;charset=utf-8," 
-            + headers.join(",") + "\n"
-            + rows.map(e => e.map(field => `"${field.replace(/"/g, '""')}"`).join(",")).join("\n");
-
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "appointments.csv");
-        document.body.appendChild(link); // Required for FF
-
-        link.click();
-        document.body.removeChild(link);
-    });
-        
+    alert('Export functionality would be implemented here');
 }
 
 function displayAppointments(appointments) {
