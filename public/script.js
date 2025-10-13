@@ -1436,7 +1436,10 @@ async function loadAppointments() {
                     ` : ''}
                 </div>
             `;
-            appointmentsList.appendChild(appointmentItem);
+            if (appointmentsList) {
+              appointmentsList.appendChild(appointmentItem);
+            }
+
         });
 
         updatePaginationControls(totalPages);
@@ -1446,7 +1449,6 @@ async function loadAppointments() {
         appointmentsList.innerHTML = '<div class="error">Error loading appointments. Please try again.</div>';
     }
 }
-
 function updatePaginationControls(totalPages) {
     const prevBtn = document.getElementById('prevPage');
     const nextBtn = document.getElementById('nextPage');
@@ -1722,6 +1724,7 @@ async function handleAppointmentBooking(appointmentData) {
 }
 
 // BUSINESS DASHBOARD INITIALIZATION - FIXED VERSION
+// BUSINESS DASHBOARD INITIALIZATION - FIXED VERSION
 function initBusinessDashboard() {
     console.log('Initializing business dashboard...');
     
@@ -1796,7 +1799,12 @@ function initBusinessDashboard() {
     }
     
     // Show dashboard
-    document.getElementById('dashboard').classList.remove('hidden');
+    const dashboardElement = document.getElementById('dashboard');
+    if (dashboardElement) {
+        dashboardElement.classList.remove('hidden');
+    } else {
+        console.error('Dashboard element not found!');
+    }
 }
 
 function updateBusinessInfo(business) {
