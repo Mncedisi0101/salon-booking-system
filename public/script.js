@@ -502,6 +502,7 @@ async function handleCustomerRegistration() {
     try {
         const password = document.getElementById('registerPassword').value;
         const confirmPassword = document.getElementById('confirmPassword').value;
+        const agreement = document.getElementById('registerAgreement').checked;
         
         if (password !== confirmPassword) {
             alert('Passwords do not match');
@@ -510,6 +511,11 @@ async function handleCustomerRegistration() {
         
         if (password.length < 6) {
             alert('Password must be at least 6 characters long');
+            return;
+        }
+
+        if (!agreement) {
+            alert('You must agree to the collection and processing of your personal information');
             return;
         }
 
@@ -550,6 +556,7 @@ async function handleCustomerRegistration() {
             name: document.getElementById('registerName').value,
             email: document.getElementById('registerEmail').value,
             phone: document.getElementById('registerPhone').value,
+            country: document.getElementById('registerCountry').value,
             password: password,
             businessId: currentBusinessId
         };
@@ -738,12 +745,12 @@ function formatTimeAgo(timestamp) {
 }
 // Enhanced Appointments Management
 function initEnhancedAppointments() {
-    // Date range filter
+    // Date range filter with null checks
     const dateRange = document.getElementById('dateRange');
     const customDateRange = document.getElementById('customDateRange');
     const customDateRangeEnd = document.getElementById('customDateRangeEnd');
     
-    if (dateRange) {
+    if (dateRange && customDateRange && customDateRangeEnd) {
         dateRange.addEventListener('change', function() {
             if (this.value === 'custom') {
                 customDateRange.style.display = 'flex';
@@ -756,25 +763,21 @@ function initEnhancedAppointments() {
         });
     }
     
-    // Custom date range listeners
-     const startDate = document.getElementById('startDate');
+    // Custom date range listeners with null checks
+    const startDate = document.getElementById('startDate');
     const endDate = document.getElementById('endDate');
     if (startDate && endDate) {
-        if (startDate) {
-            startDate.addEventListener('change', loadAppointments);
-        }
-        if (endDate) {
-            endDate.addEventListener('change', loadAppointments);
-        }
+        startDate.addEventListener('change', loadAppointments);
+        endDate.addEventListener('change', loadAppointments);
     }
     
-    // Export functionality
+    // Export functionality with null check
     const exportBtn = document.getElementById('exportBtn');
     if (exportBtn) {
         exportBtn.addEventListener('click', exportAppointments);
     }
     
-    // Pagination
+    // Pagination with null checks
     const prevPage = document.getElementById('prevPage');
     const nextPage = document.getElementById('nextPage');
     if (prevPage && nextPage) {
@@ -782,7 +785,7 @@ function initEnhancedAppointments() {
         nextPage.addEventListener('click', () => changePage(1));
     }
     
-    // Select all functionality
+    // Select all functionality with null check
     const selectAll = document.getElementById('selectAll');
     if (selectAll) {
         selectAll.addEventListener('change', function() {
@@ -1893,28 +1896,28 @@ async function loadBusinessData() {
 
 async function loadAppointments() {
     try {
-        // Get filter values
-        const dateRange = document.getElementById('dateRange')?.value || 'today';
-        const startDate = document.getElementById('startDate')?.value;
-        const endDate = document.getElementById('endDate')?.value;
-        const stylistFilter = document.getElementById('stylistFilter')?.value || 'all';
-        const statusFilter = document.getElementById('statusFilter')?.value || 'all';
+        // Get filter values safely with null checks
+        const dateRange = document.getElementById('dateRange');
+        const startDate = document.getElementById('startDate');
+        const endDate = document.getElementById('endDate');
+        const stylistFilter = document.getElementById('stylistFilter');
+        const statusFilter = document.getElementById('statusFilter');
         
         let url = `/api/appointments?businessId=${currentBusinessId}&page=${currentPage}&limit=${appointmentsPerPage}`;
         
-        // Add filters to URL
+        // Add filters to URL safely
         const params = new URLSearchParams();
         
-        // Date range filter
-        if (dateRange === 'custom' && startDate && endDate) {
-            params.append('startDate', startDate);
-            params.append('endDate', endDate);
-        } else if (dateRange !== 'custom') {
-            params.append('dateRange', dateRange);
+        // Date range filter with null checks
+        if (dateRange && dateRange.value === 'custom' && startDate && startDate.value && endDate && endDate.value) {
+            params.append('startDate', startDate.value);
+            params.append('endDate', endDate.value);
+        } else if (dateRange && dateRange.value !== 'custom') {
+            params.append('dateRange', dateRange.value);
         }
         
-        if (stylistFilter !== 'all') params.append('stylist', stylistFilter);
-        if (statusFilter !== 'all') params.append('status', statusFilter);
+        if (stylistFilter && stylistFilter.value !== 'all') params.append('stylist', stylistFilter.value);
+        if (statusFilter && statusFilter.value !== 'all') params.append('status', statusFilter.value);
         
         if (params.toString()) {
             url += '&' + params.toString();

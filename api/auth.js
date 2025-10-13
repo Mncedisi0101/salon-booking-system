@@ -113,42 +113,42 @@ module.exports = async (req, res) => {
       } else if (type === 'customer_register') {
         // Customer Registration
         if (!businessId) {
-          return res.status(400).json({ error: 'Business ID is required' });
+            return res.status(400).json({ error: 'Business ID is required' });
         }
 
         if (!email || !password || !name) {
-          return res.status(400).json({ error: 'Email, password, and name are required' });
+            return res.status(400).json({ error: 'Email, password, and name are required' });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
         
         const { data, error } = await supabase
-          .from('customers')
-          .insert([{ 
-            business_id: businessId,
-            name, 
-            email, 
-            phone,
-            password: hashedPassword
-          }])
-          .select();
+            .from('customers')
+            .insert([{ 
+                business_id: businessId,
+                name, 
+                email, 
+                phone,
+                country: req.body.country || '', // Add this line
+                password: hashedPassword
+            }])
+            .select();
         
         if (error) {
-          console.error('Customer registration error:', error);
-          return res.status(400).json({ error: error.message });
+            console.error('Customer registration error:', error);
+            return res.status(400).json({ error: error.message });
         }
         
         if (!data || data.length === 0) {
-          return res.status(400).json({ error: 'Failed to create customer account' });
+            return res.status(400).json({ error: 'Failed to create customer account' });
         }
         
         return res.status(200).json({ 
-          customer: data[0], 
-          success: true,
-          type: 'customer'
+            customer: data[0], 
+            success: true,
+            type: 'customer'
         });
-
-      } else if (type === 'customer_login') {
+    } else if (type === 'customer_login') {
         // Customer Login
         if (!businessId) {
           return res.status(400).json({ error: 'Business ID is required' });
