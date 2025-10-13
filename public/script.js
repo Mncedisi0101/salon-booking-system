@@ -1,4 +1,4 @@
-const appointments = require("../api/appointments");
+// const appointments = require("../api/appointments");
 
 // Global variables
 let currentBusinessId = null;
