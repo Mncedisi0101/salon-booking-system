@@ -12,7 +12,7 @@ module.exports = async (req, res) => {
   if (req.method === 'POST') {
     try {
       // Create a new appointment
-      const { businessId, userId, serviceId, appointmentDate, notes } = req.body;
+      const { businessId, userId, serviceId, appointmentDate, notes, stylistId } = req.body;
 
       if (!businessId || !serviceId || !appointmentDate) {
         return res.status(400).json({ error: 'businessId, serviceId, and appointmentDate are required' });
@@ -78,12 +78,14 @@ module.exports = async (req, res) => {
           service_id: serviceData.id,
           service: serviceData.name, // Backward compatibility
           appointment_date: appointmentDate, 
-          notes 
+          notes,
+          stylist_id: stylistId || null
         }])
         .select(`
           *,
           customers (name, email, phone),
-          services (name, description, price, duration)
+          services (name, description, price, duration),
+          stylists (name, specialization)
         `);
 
       if (error) {
@@ -110,7 +112,8 @@ module.exports = async (req, res) => {
               .select(`
                   *,
                   customers (name, email, phone),
-                  services (name, description, price, duration)
+                  services (name, description, price, duration),
+                  stylists (name, specialization)
               `, { count: 'exact' })
               .eq('business_id', businessId);
 
@@ -151,7 +154,7 @@ module.exports = async (req, res) => {
 
           // Stylist filtering
           if (stylist && stylist !== 'all') {
-              query = query.eq('stylist', stylist);
+              query = query.eq('stylist_id', stylist);
           }
 
           // Pagination
@@ -164,11 +167,55 @@ module.exports = async (req, res) => {
           const { data, error, count } = await query;
 
           if (error) {
+              console.error('Supabase query error:', error);
               return res.status(400).json({ error: error.message });
           }
 
+          // Transform the data to match frontend expectations
+          const transformedAppointments = data.map(appointment => ({
+            id: appointment.id,
+            business_id: appointment.business_id,
+            user_id: appointment.user_id,
+            service_id: appointment.service_id,
+            service: appointment.services?.name || appointment.service, // Fallback to old service field
+            appointment_date: appointment.appointment_date,
+            status: appointment.status,
+            notes: appointment.notes,
+            created_at: appointment.created_at,
+            stylist_id: appointment.stylist_id,
+            // Customer data
+            customers: appointment.customers ? {
+              id: appointment.customers.id,
+              name: appointment.customers.name,
+              email: appointment.customers.email,
+              phone: appointment.customers.phone
+            } : null,
+            // Service data
+            services: appointment.services ? {
+              id: appointment.services.id,
+              name: appointment.services.name,
+              description: appointment.services.description,
+              price: appointment.services.price,
+              duration: appointment.services.duration
+            } : null,
+            // Stylist data
+            stylists: appointment.stylists ? {
+              id: appointment.stylists.id,
+              name: appointment.stylists.name,
+              specialization: appointment.stylists.specialization
+            } : null,
+            // Backward compatibility fields
+            customer_name: appointment.customers?.name,
+            customer_email: appointment.customers?.email,
+            customer_phone: appointment.customers?.phone,
+            service_name: appointment.services?.name,
+            service_price: appointment.services?.price,
+            service_duration: appointment.services?.duration,
+            stylist_name: appointment.stylists?.name
+          }));
+
           return res.status(200).json({ 
-              appointments: data,
+              appointments: transformedAppointments,
               totalCount: count,
               currentPage: parseInt(page),
               totalPages: Math.ceil(count / limit)
@@ -182,22 +229,61 @@ module.exports = async (req, res) => {
   if (req.method === 'PUT') {
     try {
       // Update appointment status
-      const { id, status } = req.body;
-      if (!id || !status) {
-        return res.status(400).json({ error: 'id and status are required' });
-        }
+      const { id, status, stylist_id } = req.body;
+      if (!id) {
+        return res.status(400).json({ error: 'id is required' });
+      }
+
+      const updateData = {};
+      if (status) updateData.status = status;
+      if (stylist_id !== undefined) updateData.stylist_id = stylist_id;
+
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: 'No fields to update' });
+      }
 
       const { data, error } = await supabase
         .from('appointments')
-        .update({ status })
+        .update(updateData)
         .eq('id', id)
-        .select();
+        .select(`
+          *,
+          customers (name, email, phone),
+          services (name, description, price, duration),
+          stylists (name, specialization)
+        `);
 
       if (error) {
         return res.status(400).json({ error: error.message });
       }
 
-      return res.status(200).json({ appointment: data[0] });
+      // Transform the response data
+      const transformedAppointment = data[0] ? {
+        ...data[0],
+        customers: data[0].customers ? {
+          id: data[0].customers.id,
+          name: data[0].customers.name,
+          email: data[0].customers.email,
+          phone: data[0].customers.phone
+        } : null,
+        services: data[0].services ? {
+          id: data[0].services.id,
+          name: data[0].services.name,
+          description: data[0].services.description,
+          price: data[0].services.price,
+          duration: data[0].services.duration
+        } : null,
+        stylists: data[0].stylists ? {
+          id: data[0].stylists.id,
+          name: data[0].stylists.name,
+          specialization: data[0].stylists.specialization
+        } : null,
+        customer_name: data[0].customers?.name,
+        service_name: data[0].services?.name,
+        stylist_name: data[0].stylists?.name
+      } : null;
+
+      return res.status(200).json({ appointment: transformedAppointment });
     } catch (error) {
       console.error('Appointments PUT error:', error);
       return res.status(500).json({ error: 'Internal server error' });

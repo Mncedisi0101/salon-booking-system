@@ -1344,111 +1344,163 @@ async function deleteStylist(stylistId) {
         showNotification('Error deleting stylist: ' + error.message, 'error');
     }
 }
-
-// APPOINTMENT MANAGEMENT FUNCTIONS - FIXED VERSION
-async function loadAppointments() {
-    console.log('Loading appointments for business:', currentBusinessId);
+function displayAppointments(appointments) {
+    const tbody = document.getElementById('appointmentsTbody');
+    if (!tbody) {
+        console.error('Appointments table body not found');
+        return;
+    }
     
-    const appointmentsList = document.getElementById('appointmentsList');
-    if (!appointmentsList) {
-        console.error('Appointments list container not found!');
+    tbody.innerHTML = '';
+    
+    if (appointments.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No appointments found</td></tr>';
         return;
     }
 
-    try {
-        appointmentsList.innerHTML = '<div class="loading">Loading appointments...</div>';
+    appointments.forEach(appointment => {
+        const row = document.createElement('tr');
+        const appointmentDate = new Date(appointment.appointment_date);
+        const formattedDate = appointmentDate.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        }) + ' at ' + appointmentDate.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
         
-        // FIXED: Check if currentBusinessId exists before making the request
+        // Use the transformed data structure
+        const customerData = appointment.customers || {};
+        const customerName = customerData.name || appointment.customer_name || 'N/A';
+        const customerEmail = customerData.email || 'N/A';
+        const customerPhone = customerData.phone || 'N/A';
+        const avatarLetter = customerName.charAt(0).toUpperCase();
+        
+        const serviceData = appointment.services || {};
+        const serviceName = serviceData.name || appointment.service_name || appointment.service || 'N/A';
+        
+        const stylistData = appointment.stylists || {};
+        const stylistName = stylistData.name || appointment.stylist_name || 'Not assigned';
+        
+        row.innerHTML = `
+            <td>
+                <div class="customer-cell">
+                    <div class="customer-avatar">${avatarLetter}</div>
+                    <div>${customerName}</div>
+                </div>
+            </td>
+            <td>${serviceName}</td>
+            <td>${stylistName}</td>
+            <td>${formattedDate}</td>
+            <td>${customerPhone}</td>
+            <td>
+                <span class="status-badge status-${appointment.status}">
+                    ${appointment.status ? appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1) : 'Pending'}
+                </span>
+            </td>
+            <td>
+                ${appointment.status === 'pending' ? 
+                    `<button class="action-btn btn-confirm" onclick="confirmAppointment('${appointment.id}')">Confirm</button>` : ''}
+                <button class="action-btn btn-cancel" onclick="cancelAppointment('${appointment.id}')">Cancel</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+// APPOINTMENT MANAGEMENT FUNCTIONS - FIXED VERSION
+async function loadAppointments() {
+    try {
+        console.log('Loading appointments for business:', currentBusinessId);
+        
         if (!currentBusinessId) {
-            console.error('No business ID available for loading appointments');
-            appointmentsList.innerHTML = '<div class="error">Business ID not found. Please refresh the page.</div>';
+            console.error('No business ID available');
             return;
         }
 
-        const response = await fetch(`/api/appointments?businessId=${currentBusinessId}&page=${currentPage}&limit=${appointmentsPerPage}`);
+        // Get filter values with null checks
+        const dateRange = document.getElementById('dateRange')?.value || 'today';
+        const startDate = document.getElementById('startDate')?.value;
+        const endDate = document.getElementById('endDate')?.value;
+        const stylistFilter = document.getElementById('stylistFilter')?.value || 'all';
+        const statusFilter = document.getElementById('statusFilter')?.value || 'all';
+        
+        let url = `/api/appointments?businessId=${currentBusinessId}&page=${currentPage}&limit=${appointmentsPerPage}`;
+        
+        // Add filters to URL
+        const params = new URLSearchParams();
+        if (dateRange && dateRange !== 'custom') params.append('dateRange', dateRange);
+        if (startDate && endDate && dateRange === 'custom') {
+            params.append('startDate', startDate);
+            params.append('endDate', endDate);
+        }
+        if (stylistFilter !== 'all') params.append('stylist', stylistFilter);
+        if (statusFilter !== 'all') params.append('status', statusFilter);
+        
+        if (params.toString()) {
+            url += '&' + params.toString();
+        }
+        
+        console.log('Fetching appointments from:', url);
+        const response = await fetch(url);
         
         if (!response.ok) {
-            const errorText = await response.text(); // Capture the error text
-            throw new Error(`Failed to load appointments: ${response.status} - ${errorText}`);
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const result = await response.json();
         
-        if (!result.success) {
-            throw new Error(result.error || 'Failed to load appointments');
+        if (!result.appointments) {
+            throw new Error('No appointments data in response');
         }
 
-        const appointments = result.appointments || [];
-        const totalAppointments = result.total || 0;
-        const totalPages = Math.ceil(totalAppointments / appointmentsPerPage);
-
-        console.log('Loaded appointments:', appointments);
+        displayAppointments(result.appointments);
+        updateStats(result.appointments);
         
-        if (appointments.length === 0) {
-            appointmentsList.innerHTML = `
-                <div class="no-appointments">
-                    <p>No appointments found.</p>
-                    <p>Appointments will appear here when customers book your services.</p>
-                </div>
-            `;
-            updatePaginationControls(totalPages);
-            return;
+        // Update pagination if available
+        if (result.totalCount !== undefined) {
+            updatePagination(result.totalCount);
         }
-
-        appointmentsList.innerHTML = '';
         
-        appointments.forEach(appointment => {
-            const appointmentItem = document.createElement('div');
-            appointmentItem.className = `appointment-item ${appointment.status}`;
-            appointmentItem.innerHTML = `
-                <div class="appointment-header">
-                    <h3>${appointment.service_name || 'Service'}</h3>
-                    <span class="appointment-status ${appointment.status}">${appointment.status}</span>
-                </div>
-                <div class="appointment-details">
-                    <p><strong>Customer:</strong> ${appointment.customer_name} (${appointment.customer_email})</p>
-                    <p><strong>Date & Time:</strong> ${formatAppointmentDate(appointment.appointment_date)}</p>
-                    <p><strong>Duration:</strong> ${appointment.service_duration || 30} minutes</p>
-                    <p><strong>Price:</strong> R${appointment.service_price || '0'}</p>
-                    ${appointment.stylist_name ? `<p><strong>Stylist:</strong> ${appointment.stylist_name}</p>` : ''}
-                    ${appointment.notes ? `<p><strong>Notes:</strong> ${appointment.notes}</p>` : ''}
-                </div>
-                <div class="appointment-actions">
-                    ${appointment.status === 'pending' ? `
-                        <button class="appointment-action-btn confirm" onclick="updateAppointmentStatus('${appointment.id}', 'confirmed')">
-                            Confirm
-                        </button>
-                        <button class="appointment-action-btn cancel" onclick="updateAppointmentStatus('${appointment.id}', 'cancelled')">
-                            Cancel
-                        </button>
-                    ` : ''}
-                    ${appointment.status === 'confirmed' ? `
-                        <button class="appointment-action-btn complete" onclick="updateAppointmentStatus('${appointment.id}', 'completed')">
-                            Complete
-                        </button>
-                        <button class="appointment-action-btn cancel" onclick="updateAppointmentStatus('${appointment.id}', 'cancelled')">
-                            Cancel
-                        </button>
-                    ` : ''}
-                    ${appointment.status === 'completed' || appointment.status === 'cancelled' ? `
-                        <button class="appointment-action-btn delete" onclick="deleteAppointment('${appointment.id}')">
-                            Delete
-                        </button>
-                    ` : ''}
-                </div>
-            `;
-            if (appointmentsList) {
-              appointmentsList.appendChild(appointmentItem);
-            }
-
-        });
-
-        updatePaginationControls(totalPages);
-
     } catch (error) {
         console.error('Error loading appointments:', error);
-        appointmentsList.innerHTML = '<div class="error">Error loading appointments. Please try again.</div>';
+        const tbody = document.getElementById('appointmentsTbody');
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px; color: var(--danger);">Error loading appointments: ${error.message}</td></tr>`;
+        }
     }
+}
+function updateStats(appointments) {
+    const today = new Date().toDateString();
+    const todayAppointments = appointments.filter(apt => 
+        new Date(apt.appointment_date).toDateString() === today
+    );
+    
+    const pendingAppointments = appointments.filter(apt => 
+        apt.status === 'pending'
+    );
+    
+    const confirmedAppointments = appointments.filter(apt => 
+        apt.status === 'confirmed'
+    );
+    
+    // Update dashboard stats
+    const todayCount = document.getElementById('todaysAppointmentsCount');
+    const pendingCount = document.getElementById('pendingAppointmentsCount');
+    const appointmentBadge = document.getElementById('appointmentBadge');
+    
+    if (todayCount) todayCount.textContent = todayAppointments.length;
+    if (pendingCount) pendingCount.textContent = pendingAppointments.length;
+    if (appointmentBadge) appointmentBadge.textContent = pendingAppointments.length;
+    
+    // Update summary cards if they exist
+    const pendingSummary = document.getElementById('pendingCount');
+    const confirmedSummary = document.getElementById('confirmedCount');
+    const totalSummary = document.getElementById('totalCount');
+    
+    if (pendingSummary) pendingSummary.textContent = pendingAppointments.length;
+    if (confirmedSummary) confirmedSummary.textContent = confirmedAppointments.length;
+    if (totalSummary) totalSummary.textContent = appointments.length;
 }
 function updatePaginationControls(totalPages) {
     const prevBtn = document.getElementById('prevPage');
