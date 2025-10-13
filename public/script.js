@@ -1459,7 +1459,7 @@ async function loadAppointments() {
         
         // Update pagination if available
         if (result.totalCount !== undefined) {
-            updatePagination(result.totalCount);
+            updatePaginationControls(result.totalCount);
         }
         
     } catch (error) {
