@@ -757,11 +757,15 @@ function initEnhancedAppointments() {
     }
     
     // Custom date range listeners
-    const startDate = document.getElementById('startDate');
+     const startDate = document.getElementById('startDate');
     const endDate = document.getElementById('endDate');
     if (startDate && endDate) {
-        startDate.addEventListener('change', loadAppointments);
-        endDate.addEventListener('change', loadAppointments);
+        if (startDate) {
+            startDate.addEventListener('change', loadAppointments);
+        }
+        if (endDate) {
+            endDate.addEventListener('change', loadAppointments);
+        }
     }
     
     // Export functionality

@@ -1546,8 +1546,14 @@
         try {
             // Get filter values
             const dateFilter = document.getElementById('datePicker').value;
-            const stylistFilter = document.getElementById('stylistFilter').value;
-            const statusFilter = document.getElementById('statusFilter').value;
+            // Get filter values
+            const dateRangeEl = document.getElementById('dateRange');
+            const dateRange = dateRangeEl ? dateRangeEl.value : 'today';
+            const startDate = document.getElementById('startDate')?.value;
+            const endDate = document.getElementById('endDate')?.value;
+            const stylistFilter = document.getElementById('stylistFilter')?.value || 'all';
+            const statusFilter = document.getElementById('statusFilter')?.value || 'all';
+            
             
             let url = `/api/appointments?businessId=${currentBusinessId}`;
             
