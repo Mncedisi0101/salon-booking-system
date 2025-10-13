@@ -1368,7 +1368,8 @@ async function loadAppointments() {
         const response = await fetch(`/api/appointments?businessId=${currentBusinessId}&page=${currentPage}&limit=${appointmentsPerPage}`);
         
         if (!response.ok) {
-            throw new Error(`Failed to load appointments: ${response.status}`);
+            const errorText = await response.text(); // Capture the error text
+            throw new Error(`Failed to load appointments: ${response.status} - ${errorText}`);
         }
         
         const result = await response.json();
