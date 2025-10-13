@@ -1819,6 +1819,7 @@ function updateBusinessInfo(business) {
     if (businessAddressElement) businessAddressElement.textContent = business.address;
 }
 
+// Tab navigation
 function initDashboardTabs() {
     const tabButtons = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
@@ -1850,7 +1851,6 @@ function initDashboardTabs() {
         });
     });
 }
-
 // Initialize based on current page
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, initializing application...');
