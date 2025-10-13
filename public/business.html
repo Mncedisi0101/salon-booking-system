@@ -540,180 +540,394 @@
             justify-content: flex-end;
             gap: 15px;
         }
+
         /* Services Management Styles */
-.services-management-container {
-    background: white;
-    border-radius: 10px;
-    padding: 30px;
-    box-shadow: var(--shadow);
-    margin-bottom: 40px;
-}
+        .services-management-container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 40px;
+        }
 
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 25px;
-    flex-wrap: wrap;
-    gap: 15px;
-}
+        .services-management-container .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
 
-.section-header h2 {
-    color: var(--primary-color);
-    margin: 0;
-}
+        .services-management-container .section-header h2 {
+            color: var(--primary);
+            margin: 0;
+        }
 
-.services-list {
-    display: grid;
-    gap: 15px;
-}
+        .services-list {
+            display: grid;
+            gap: 15px;
+        }
 
-.service-item {
-    background: var(--secondary-color);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    transition: all 0.3s ease;
-}
+        .service-item {
+            background: var(--light);
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            transition: all 0.3s ease;
+        }
 
-.service-item:hover {
-    border-color: var(--primary-color);
-    box-shadow: 0 2px 8px rgba(109, 40, 217, 0.1);
-}
+        .service-item:hover {
+            border-color: var(--primary);
+            box-shadow: 0 2px 8px rgba(138, 79, 255, 0.1);
+        }
 
-.service-info {
-    flex: 1;
-}
+        .service-info {
+            flex: 1;
+        }
 
-.service-info h3 {
-    color: var(--text-color);
-    margin-bottom: 8px;
-    font-size: 1.1rem;
-}
+        .service-info h3 {
+            color: var(--dark);
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
 
-.service-info p {
-    color: var(--text-light);
-    margin-bottom: 5px;
-    line-height: 1.4;
-}
+        .service-info p {
+            color: var(--gray);
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
 
-.service-meta {
-    display: flex;
-    gap: 20px;
-    margin-top: 10px;
-    flex-wrap: wrap;
-}
+        .service-meta {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
 
-.service-price {
-    font-weight: bold;
-    color: var(--primary-color);
-    background: rgba(109, 40, 217, 0.1);
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.9rem;
-}
+        .service-price {
+            font-weight: bold;
+            color: var(--primary);
+            background: rgba(138, 79, 255, 0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
 
-.service-duration {
-    color: var(--text-light);
-    background: rgba(107, 114, 128, 0.1);
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.9rem;
-}
+        .service-duration {
+            color: var(--gray);
+            background: rgba(123, 123, 143, 0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
 
-.service-actions {
-    display: flex;
-    gap: 10px;
-    margin-left: 15px;
-}
+        .service-actions {
+            display: flex;
+            gap: 10px;
+            margin-left: 15px;
+        }
 
-.service-action-btn {
-    background: none;
-    border: 1px solid var(--border-color);
-    padding: 8px 12px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    transition: all 0.3s ease;
-}
+        .service-action-btn {
+            background: none;
+            border: 1px solid #e0e0e0;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
 
-.service-edit {
-    color: var(--primary-color);
-    border-color: var(--primary-color);
-}
+        .service-edit {
+            color: var(--primary);
+            border-color: var(--primary);
+        }
 
-.service-edit:hover {
-    background: var(--primary-color);
-    color: white;
-}
+        .service-edit:hover {
+            background: var(--primary);
+            color: white;
+        }
 
-.service-delete {
-    color: var(--error-color);
-    border-color: var(--error-color);
-}
+        .service-delete {
+            color: var(--danger);
+            border-color: var(--danger);
+        }
 
-.service-delete:hover {
-    background: var(--error-color);
-    color: white;
-}
+        .service-delete:hover {
+            background: var(--danger);
+            color: white;
+        }
 
-.no-services {
-    text-align: center;
-    padding: 40px;
-    color: var(--text-light);
-}
+        .no-services {
+            text-align: center;
+            padding: 40px;
+            color: var(--gray);
+        }
 
-.no-services p {
-    margin-bottom: 15px;
-}
+        .no-services p {
+            margin-bottom: 15px;
+        }
 
-/* Service Modal Styles */
-#serviceModal .modal-content {
-    max-width: 500px;
-    width: 95%;
-}
+        /* Service Modal Styles */
+        #serviceModal .modal-content {
+            max-width: 500px;
+            width: 95%;
+        }
 
-.form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-}
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
 
-.form-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    margin-top: 25px;
-}
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
 
-.form-actions .btn-secondary,
-.form-actions .btn-primary {
-    width: auto;
-    min-width: 120px;
-}
+        .form-actions .btn-secondary,
+        .form-actions .btn-primary {
+            width: auto;
+            min-width: 120px;
+        }
 
-/* Loading States */
-.service-item.loading {
-    opacity: 0.6;
-    pointer-events: none;
-}
+        /* Loading States */
+        .service-item.loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
 
-.service-item.loading::after {
-    content: "Updating...";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(255, 255, 255, 0.9);
-    padding: 10px 20px;
-    border-radius: 5px;
-    font-size: 0.9rem;
-    color: var(--text-color);
-}
+        .service-item.loading::after {
+            content: "Updating...";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            color: var(--dark);
+        }
 
+        /* Stylists Management Styles */
+        .stylists-management-container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 40px;
+        }
+
+        .stylists-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .stylist-item {
+            background: var(--light);
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            transition: all 0.3s ease;
+        }
+
+        .stylist-item:hover {
+            border-color: var(--primary);
+            box-shadow: 0 2px 8px rgba(138, 79, 255, 0.1);
+        }
+
+        .stylist-info {
+            flex: 1;
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+        }
+
+        .stylist-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: var(--primary-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 24px;
+        }
+
+        .stylist-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .stylist-details {
+            flex: 1;
+        }
+
+        .stylist-details h3 {
+            color: var(--dark);
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .inactive-badge {
+            background: var(--danger);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: normal;
+        }
+
+        .stylist-specialization {
+            color: var(--primary);
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .stylist-contact {
+            color: var(--gray);
+            margin-bottom: 3px;
+            font-size: 0.9rem;
+        }
+
+        .stylist-bio {
+            color: var(--gray);
+            margin-top: 8px;
+            font-style: italic;
+            line-height: 1.4;
+        }
+
+        .stylist-actions {
+            display: flex;
+            gap: 10px;
+            margin-left: 15px;
+        }
+
+        .stylist-action-btn {
+            background: none;
+            border: 1px solid #e0e0e0;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+
+        .stylist-edit {
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .stylist-edit:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .stylist-delete {
+            color: var(--danger);
+            border-color: var(--danger);
+        }
+
+        .stylist-delete:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: var(--transition);
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(138, 79, 255, 0.1);
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-weight: normal;
+        }
+
+        .checkbox-label input {
+            width: auto;
+            margin-right: 10px;
+        }
+
+        /* Button Styles */
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-light);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--light);
+            color: var(--dark);
+            border: 1px solid #e0e0e0;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-secondary:hover {
+            background: #e8e8e8;
+        }
+
+        /* Hidden utility class */
+        .hidden {
+            display: none !important;
+        }
 
         /* Responsive Styles */
         @media (max-width: 1100px) {
@@ -803,58 +1017,74 @@
                 width: 100%;
                 justify-content: space-between;
             }
+            
             .section-header {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .section-header h2 {
-        text-align: center;
-    }
-    
-    .service-item {
-        flex-direction: column;
-        gap: 15px;
-    }
-    
-    .service-actions {
-        margin-left: 0;
-        width: 100%;
-        justify-content: flex-end;
-    }
-    
-    .form-row {
-        grid-template-columns: 1fr;
-    }
-    
-    .form-actions {
-        flex-direction: column;
-    }
-    
-    .form-actions .btn-secondary,
-    .form-actions .btn-primary {
-        width: 100%;
-    }
-}
-    @media (max-width: 480px) {
-    .services-management-container {
-        padding: 20px 15px;
-    }
-    
-    .service-meta {
-        flex-direction: column;
-        gap: 8px;
-    }
-    
-    .service-actions {
-        flex-direction: column;
-    }
-    
-    .service-action-btn {
-        width: 100%;
-        text-align: center;
-    }
-}
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .section-header h2 {
+                text-align: center;
+            }
+            
+            .service-item,
+            .stylist-item {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .service-actions,
+            .stylist-actions {
+                margin-left: 0;
+                width: 100%;
+                justify-content: flex-end;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+            
+            .form-actions .btn-secondary,
+            .form-actions .btn-primary {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .services-management-container,
+            .stylists-management-container {
+                padding: 20px 15px;
+            }
+            
+            .service-meta {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .service-actions,
+            .stylist-actions {
+                flex-direction: column;
+            }
+            
+            .service-action-btn,
+            .stylist-action-btn {
+                width: 100%;
+                text-align: center;
+            }
+            
+            .stylist-info {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .stylist-image {
+                align-self: center;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1230,155 +1460,22 @@
 
     <script src="script.js"></script>
     <script>
-        // Global variables
-        let currentBusinessId = null;
-        let currentPage = 1;
-        const appointmentsPerPage = 10;
-
+        // Remove the duplicate currentBusinessId declaration
+        // All JavaScript functionality is now handled by script.js
+        
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('Initializing business dashboard...');
+            console.log('Business dashboard HTML loaded');
             
-            // Check authentication
-            const businessUser = localStorage.getItem('businessUser');
-            const userType = localStorage.getItem('userType');
-            
-            if (!businessUser || userType !== 'business') {
-                alert('Please login first');
-                window.location.href = 'customer.html?type=business';
-                return;
-            }
-
-            const user = JSON.parse(businessUser);
-            const urlParams = new URLSearchParams(window.location.search);
-            const businessId = urlParams.get('id');
-            
-            // Verify business ownership
-            if (user.id !== businessId) {
-                alert('Access denied');
-                window.location.href = 'customer.html?type=business';
-                return;
-            }
-
-            currentBusinessId = businessId;
-            
-            // Initialize dashboard
-            initializeDashboard(user);
-            loadBusinessData();
-            loadAppointments();
-            loadServices();
-            loadStylists();
-            initNotificationPolling();
-
-            // Set up event listeners
-            setupEventListeners();
-            
-            // Update current date
+            // Simple initialization - main logic is in script.js
             updateCurrentDate();
             setInterval(updateCurrentDate, 60000);
         });
-
-        function initializeDashboard(businessUser) {
-            document.getElementById('sidebarSalonName').textContent = businessUser.name;
-            document.getElementById('dashboardTitle').textContent = businessUser.name + " Dashboard";
-            document.getElementById('dashboardOwnerName').textContent = businessUser.name.split(' ')[0] || 'Owner';
-            document.getElementById('userAvatar').textContent = businessUser.name.charAt(0).toUpperCase();
-        }
-
-        function setupEventListeners() {
-            // Logout
-            document.getElementById('logoutBtn').addEventListener('click', function() {
-                localStorage.removeItem('businessUser');
-                localStorage.removeItem('userType');
-                window.location.href = 'customer.html?type=business';
-            });
-
-            // Sidebar navigation
-            document.querySelectorAll('.sidebar-menu li').forEach(item => {
-                item.addEventListener('click', function() {
-                    const tab = this.getAttribute('data-tab');
-                    navigateToTab(tab);
-                });
-            });
-
-            // Modal close buttons
-            document.querySelectorAll('.close-modal').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    this.closest('.modal').classList.add('hidden');
-                });
-            });
-
-            // Filter changes
-            document.getElementById('dateRange')?.addEventListener('change', handleDateRangeChange);
-            document.getElementById('stylistFilter')?.addEventListener('change', loadAppointments);
-            document.getElementById('statusFilter')?.addEventListener('change', loadAppointments);
-            document.getElementById('startDate')?.addEventListener('change', loadAppointments);
-            document.getElementById('endDate')?.addEventListener('change', loadAppointments);
-
-            // Pagination
-            document.getElementById('prevPage')?.addEventListener('click', () => changePage(-1));
-            document.getElementById('nextPage')?.addEventListener('click', () => changePage(1));
-
-            // Export
-            document.getElementById('exportBtn')?.addEventListener('click', exportAppointments);
-
-            // Notification button
-            document.getElementById('notificationBtn')?.addEventListener('click', toggleNotifications);
-        }
-
-        function navigateToTab(tab) {
-            // Update active menu item
-            document.querySelectorAll('.sidebar-menu li').forEach(item => {
-                item.classList.remove('active');
-            });
-            document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
-
-            // Scroll to section
-            const section = document.getElementById(tab + 'Section');
-            if (section) {
-                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-
-            // Special handling for QR code
-            if (tab === 'qrcode') {
-                openQRModal();
-            }
-        }
-
-        function handleDateRangeChange() {
-            const dateRange = document.getElementById('dateRange').value;
-            const customRange = document.getElementById('customDateRange');
-            const customRangeEnd = document.getElementById('customDateRangeEnd');
-
-            if (dateRange === 'custom') {
-                customRange.style.display = 'flex';
-                customRangeEnd.style.display = 'flex';
-            } else {
-                customRange.style.display = 'none';
-                customRangeEnd.style.display = 'none';
-                loadAppointments();
-            }
-        }
 
         function updateCurrentDate() {
             const now = new Date();
             const options = { year: 'numeric', month: 'long', day: 'numeric' };
             const el = document.getElementById('currentDate');
             if (el) el.textContent = now.toLocaleDateString('en-US', options);
-        }
-
-        async function loadBusinessData() {
-            try {
-                const response = await fetch(`/api/business?id=${currentBusinessId}`);
-                const result = await response.json();
-                
-                if (response.ok) {
-                    console.log('Business data loaded:', result.business);
-                } else {
-                    console.error('Error loading business data:', result.error);
-                }
-            } catch (error) {
-                console.error('Error loading business data:', error);
-            }
         }
     </script>
 </body>
