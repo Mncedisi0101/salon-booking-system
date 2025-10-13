@@ -1514,6 +1514,7 @@ document.addEventListener('DOMContentLoaded', function() {
         initBusinessDashboard();
         initNotificationSystem();
         initEnhancedAppointments();
+         initNotificationPolling();
         
         // Check if business user is logged in
         const businessUser = localStorage.getItem('businessUser');
@@ -1903,6 +1904,8 @@ function changePage(direction) {
 // Consolidated loadAppointments function - REPLACE ALL DUPLICATES WITH THIS
 async function loadAppointments() {
     try {
+        console.log('Loading appointments for business:', currentBusinessId);
+        
         // Get filter values
         const dateRange = document.getElementById('dateRange')?.value || 'today';
         const startDate = document.getElementById('startDate')?.value;
@@ -1943,14 +1946,23 @@ async function loadAppointments() {
             url += '&' + params.toString();
         }
         
+        console.log('Fetching appointments from:', url);
         const response = await fetch(url);
-        const result = await response.json();
         
-        if (response.ok) {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('Appointments API response:', result);
+        
+        if (result.appointments) {
             const appointments = result.appointments || [];
+            console.log(`Found ${appointments.length} appointments`);
             
             // Use enhanced display if available (business dashboard)
             if (document.getElementById('appointmentsTbody') && document.querySelector('.table-container')) {
+                console.log('Using enhanced appointments display');
                 displayEnhancedAppointments(appointments);
                 updateAppointmentSummary(appointments);
                 if (result.totalCount !== undefined) {
@@ -1958,46 +1970,27 @@ async function loadAppointments() {
                 }
             } else {
                 // Use basic display for other pages
+                console.log('Using basic appointments display');
                 displayAppointments(appointments);
             }
             
             updateStats(appointments);
             
         } else {
-            console.error('Error loading appointments:', result.error);
-            // Show error in UI
-            const tbody = document.getElementById('appointmentsTbody');
-            const appointmentsList = document.getElementById('appointmentsList');
-            
-            if (tbody) {
-                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px; color: var(--danger);">Error loading appointments</td></tr>`;
-            }
-            if (appointmentsList) {
-                appointmentsList.innerHTML = '<p class="error-message">Error loading appointments</p>';
-            }
+            console.error('No appointments in response:', result);
+            showNoAppointmentsMessage();
         }
+        
     } catch (error) {
         console.error('Error loading appointments:', error);
-        // Show error in UI
-        const tbody = document.getElementById('appointmentsTbody');
-        const appointmentsList = document.getElementById('appointmentsList');
-        
-        if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px; color: var(--danger);">Network error loading appointments</td></tr>`;
-        }
-        if (appointmentsList) {
-            appointmentsList.innerHTML = '<p class="error-message">Network error loading appointments</p>';
-        }
+        showErrorMessage('Failed to load appointments: ' + error.message);
     }
 }
-
-function displayEnhancedAppointments(appointments) {
+function showNoAppointmentsMessage() {
     const tbody = document.getElementById('appointmentsTbody');
-    if (!tbody) return;
+    const appointmentsList = document.getElementById('appointmentsList');
     
-    tbody.innerHTML = '';
-    
-    if (appointments.length === 0) {
+    if (tbody) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="8" style="text-align: center; padding: 40px;">
@@ -2007,8 +2000,38 @@ function displayEnhancedAppointments(appointments) {
                 </td>
             </tr>
         `;
+    }
+    if (appointmentsList) {
+        appointmentsList.innerHTML = '<p class="no-appointments">No appointments scheduled</p>';
+    }
+}
+
+function showErrorMessage(message) {
+    const tbody = document.getElementById('appointmentsTbody');
+    const appointmentsList = document.getElementById('appointmentsList');
+    
+    if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px; color: var(--danger);">${message}</td></tr>`;
+    }
+    if (appointmentsList) {
+        appointmentsList.innerHTML = `<p class="error-message">${message}</p>`;
+    }
+}
+function displayEnhancedAppointments(appointments) {
+    const tbody = document.getElementById('appointmentsTbody');
+    if (!tbody) {
+        console.error('Appointments table body not found');
         return;
     }
+    
+    tbody.innerHTML = '';
+    
+    if (appointments.length === 0) {
+        showNoAppointmentsMessage();
+        return;
+    }
+    
+    console.log('Displaying enhanced appointments:', appointments);
     
     appointments.forEach(appointment => {
         const row = document.createElement('tr');
@@ -2022,8 +2045,17 @@ function displayEnhancedAppointments(appointments) {
             minute: '2-digit' 
         });
         
-        const customerName = appointment.customers ? appointment.customers.name : 'N/A';
+        // FIXED: Handle both customers and users object structures
+        const customerData = appointment.customers || appointment.users || {};
+        const customerName = customerData.name || 'N/A';
+        const customerEmail = customerData.email || 'N/A';
+        const customerPhone = customerData.phone || 'N/A';
         const avatarLetter = customerName.charAt(0).toUpperCase();
+        
+        // FIXED: Handle service data properly
+        const serviceData = appointment.services || {};
+        const serviceName = appointment.service || serviceData.name || 'N/A';
+        const servicePrice = serviceData.price || 'N/A';
         
         row.innerHTML = `
             <td>
@@ -2034,14 +2066,14 @@ function displayEnhancedAppointments(appointments) {
                     <div class="customer-avatar">${avatarLetter}</div>
                     <div>
                         <div class="customer-name">${customerName}</div>
-                        <div class="customer-email">${appointment.customers ? appointment.customers.email : 'N/A'}</div>
+                        <div class="customer-email">${customerEmail}</div>
                     </div>
                 </div>
             </td>
             <td>
                 <div class="service-info">
-                    <div class="service-name">${appointment.service}</div>
-                    ${appointment.services ? `<div class="service-price">R${appointment.services.price}</div>` : ''}
+                    <div class="service-name">${serviceName}</div>
+                    ${servicePrice !== 'N/A' ? `<div class="service-price">R${servicePrice}</div>` : ''}
                 </div>
             </td>
             <td>${appointment.stylist || 'Not assigned'}</td>
@@ -2053,13 +2085,13 @@ function displayEnhancedAppointments(appointments) {
             </td>
             <td>
                 <div class="contact-info">
-                    <div class="phone">${appointment.customers ? appointment.customers.phone : 'N/A'}</div>
-                    <div class="email">${appointment.customers ? appointment.customers.email : 'N/A'}</div>
+                    <div class="phone">${customerPhone}</div>
+                    <div class="email">${customerEmail}</div>
                 </div>
             </td>
             <td>
                 <span class="status-badge status-${appointment.status}">
-                    ${appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                    ${appointment.status ? appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1) : 'Pending'}
                 </span>
             </td>
             <td>
@@ -2084,7 +2116,6 @@ function displayEnhancedAppointments(appointments) {
     // Attach event listeners
     attachAppointmentEventListeners();
 }
-
 function updateAppointmentSummary(appointments) {
     const pendingCount = appointments.filter(apt => apt.status === 'pending').length;
     const confirmedCount = appointments.filter(apt => apt.status === 'confirmed').length;
@@ -2205,17 +2236,20 @@ function displayAppointments(appointments) {
                 appointmentItem.className = 'appointment-item';
                 const appointmentDate = new Date(appointment.appointment_date);
                 const formattedDate = appointmentDate.toLocaleDateString() + ' ' + appointmentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const userObj = appointment.customers || appointment.users;
+                
+                // FIXED: Handle both customers and users object structures
+                const userObj = appointment.customers || appointment.users || {};
+                
                 appointmentItem.innerHTML = `
                     <div class="appointment-info">
                         <h3>${appointment.service}</h3>
-                        <p>Customer: ${userObj ? userObj.name : 'N/A'}</p>
+                        <p>Customer: ${userObj.name || 'N/A'}</p>
                         <p>Date: ${formattedDate}</p>
-                        <p>Phone: ${userObj ? userObj.phone : 'N/A'}</p>
+                        <p>Phone: ${userObj.phone || 'N/A'}</p>
                         ${appointment.notes ? `<p>Notes: ${appointment.notes}</p>` : ''}
                     </div>
                     <div class="appointment-actions">
-                        <span class="status-badge status-${appointment.status}">${appointment.status}</span>
+                        <span class="status-badge status-${appointment.status}">${appointment.status || 'pending'}</span>
                         <div>
                             <button class="btn-secondary" onclick="updateAppointmentStatus('${appointment.id}', 'confirmed')">Confirm</button>
                             <button class="btn-secondary" onclick="updateAppointmentStatus('${appointment.id}', 'cancelled')">Cancel</button>
@@ -2228,7 +2262,7 @@ function displayAppointments(appointments) {
         return;
     }
 
-    // Table view (business.html)
+    // Table view (business.html) - Basic version
     const tbody = document.getElementById('appointmentsTbody');
     if (!tbody) return;
 
@@ -2242,9 +2276,12 @@ function displayAppointments(appointments) {
         const row = document.createElement('tr');
         const appointmentDate = new Date(appointment.appointment_date);
         const formattedDate = appointmentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + ' at ' + appointmentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-        const userObj = appointment.customers || appointment.users;
-        const customerName = userObj ? userObj.name : 'N/A';
+        
+        // FIXED: Handle both customers and users object structures
+        const userObj = appointment.customers || appointment.users || {};
+        const customerName = userObj.name || 'N/A';
         const avatarLetter = customerName.charAt(0).toUpperCase();
+        
         row.innerHTML = `
             <td>
                 <div class="customer-cell">
@@ -2255,10 +2292,10 @@ function displayAppointments(appointments) {
             <td>${appointment.service}</td>
             <td>${appointment.stylist || 'Not assigned'}</td>
             <td>${formattedDate}</td>
-            <td>${userObj ? userObj.phone : 'N/A'}</td>
+            <td>${userObj.phone || 'N/A'}</td>
             <td>
                 <span class="status-badge status-${appointment.status}">
-                    ${appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                    ${appointment.status ? appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1) : 'Pending'}
                 </span>
             </td>
             <td>
@@ -2271,24 +2308,27 @@ function displayAppointments(appointments) {
 
     // Attach confirm buttons to open the modal if present
     const confirmationModal = document.getElementById('confirmationModal');
-    const modalCustomer = document.getElementById('modalCustomer');
-    const modalService = document.getElementById('modalService');
-    const modalStylist = document.getElementById('modalStylist');
-    const modalDateTime = document.getElementById('modalDateTime');
-
-    document.querySelectorAll('.btn-confirm[data-appointment-id]').forEach(button => {
-        button.addEventListener('click', function() {
-            const row = this.closest('tr');
-            if (row && confirmationModal) {
-                if (modalCustomer) modalCustomer.textContent = row.querySelector('.customer-cell div:last-child')?.textContent || '';
-                if (modalService) modalService.textContent = row.cells[1]?.textContent || '';
-                if (modalStylist) modalStylist.textContent = row.cells[2]?.textContent || '';
-                if (modalDateTime) modalDateTime.textContent = row.cells[3]?.textContent || '';
-                confirmationModal.dataset.appointmentId = this.getAttribute('data-appointment-id');
-                confirmationModal.style.display = 'flex';
-            }
+    if (confirmationModal) {
+        document.querySelectorAll('.btn-confirm[data-appointment-id]').forEach(button => {
+            button.addEventListener('click', function() {
+                const row = this.closest('tr');
+                if (row) {
+                    const modalCustomer = document.getElementById('modalCustomer');
+                    const modalService = document.getElementById('modalService');
+                    const modalStylist = document.getElementById('modalStylist');
+                    const modalDateTime = document.getElementById('modalDateTime');
+                    
+                    if (modalCustomer) modalCustomer.textContent = row.querySelector('.customer-cell div:last-child')?.textContent || '';
+                    if (modalService) modalService.textContent = row.cells[1]?.textContent || '';
+                    if (modalStylist) modalStylist.textContent = row.cells[2]?.textContent || '';
+                    if (modalDateTime) modalDateTime.textContent = row.cells[3]?.textContent || '';
+                    
+                    confirmationModal.dataset.appointmentId = this.getAttribute('data-appointment-id');
+                    confirmationModal.style.display = 'flex';
+                }
+            });
         });
-    });
+    }
 }
 
 function updateStats(appointments) {

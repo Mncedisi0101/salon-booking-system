@@ -1464,39 +1464,49 @@
         let lastSeenCreatedAt = null;
         let latestKnownCreatedAt = null;
 
+        // Enhanced notification polling for new bookings
+        let lastPollTime = null;
+
         async function pollNewAppointments() {
             try {
-                const resp = await fetch(`/api/appointments?businessId=${currentBusinessId}`);
-                const data = await resp.json();
-                if (!resp.ok) return;
-
-                const appts = Array.isArray(data.appointments) ? data.appointments : [];
-                const toDate = (v) => v ? new Date(v) : null;
-                const createdDates = appts.map(a => toDate(a.created_at)).filter(Boolean);
-                latestKnownCreatedAt = createdDates.length ? new Date(Math.max.apply(null, createdDates)) : latestKnownCreatedAt;
-
-                if (lastSeenCreatedAt === null) {
-                    lastSeenCreatedAt = latestKnownCreatedAt || new Date();
-                    updateNotificationBadge();
-                    return;
-                }
-
-                const newAppointments = appts.filter(a => {
-                    const c = toDate(a.created_at);
-                    return c && lastSeenCreatedAt && c > lastSeenCreatedAt;
+                console.log('Polling for new appointments...');
+                const url = `/api/appointments?businessId=${currentBusinessId}&page=1&limit=50`;
+                const response = await fetch(url);
+                
+                if (!response.ok) return;
+                
+                const result = await response.json();
+                const appointments = Array.isArray(result.appointments) ? result.appointments : [];
+                
+                // Filter new appointments since last poll
+                const newAppointments = appointments.filter(appointment => {
+                    const appointmentTime = new Date(appointment.created_at || appointment.appointment_date);
+                    return !lastPollTime || appointmentTime > lastPollTime;
                 });
-
+                
+                console.log(`Found ${newAppointments.length} new appointments since last poll`);
+                
                 if (newAppointments.length > 0) {
                     newAppointments.forEach(appointment => {
+                        const customerData = appointment.customers || appointment.users || {};
+                        const customerName = customerData.name || 'A customer';
+                        
                         addNotification(
-                            'New Booking',
-                            `${appointment.customers?.name || 'A customer'} booked ${appointment.service}`,
+                            'New Booking Received',
+                            `${customerName} booked ${appointment.service || 'a service'}`,
                             'new_booking'
                         );
                     });
+                    
+                    // Refresh appointments list if new ones were found
+                    loadAppointments();
                 }
-            } catch (e) {
-                console.warn('Notification poll failed', e);
+                
+                // Update last poll time to current time
+                lastPollTime = new Date();
+                
+            } catch (error) {
+                console.warn('Notification poll failed:', error);
             }
         }
 
@@ -1576,76 +1586,112 @@
     }
 
     function displayAppointments(appointments) {
-        const tbody = document.getElementById('appointmentsTbody');
-        if (!tbody) return;
-        
-        tbody.innerHTML = '';
-        
+    // Card list view (if exists)
+    const appointmentsList = document.getElementById('appointmentsList');
+    if (appointmentsList) {
+        appointmentsList.innerHTML = '';
         if (appointments.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No appointments found</td></tr>';
-            return;
-        }
-        
-        appointments.forEach(appointment => {
-            const row = document.createElement('tr');
-            const appointmentDate = new Date(appointment.appointment_date);
-            const formattedDate = appointmentDate.toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-            }) + ' at ' + appointmentDate.toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            });
-            
-            // Get first letter of customer name for avatar
-            const customerName = appointment.users ? appointment.users.name : 'N/A';
-            const avatarLetter = customerName.charAt(0).toUpperCase();
-            
-            row.innerHTML = `
-                <td>
-                    <div class="customer-cell">
-                        <div class="customer-avatar">${avatarLetter}</div>
-                        <div>${customerName}</div>
+            appointmentsList.innerHTML = '<p class="no-appointments">No appointments scheduled</p>';
+        } else {
+            appointments.forEach(appointment => {
+                const appointmentItem = document.createElement('div');
+                appointmentItem.className = 'appointment-item';
+                const appointmentDate = new Date(appointment.appointment_date);
+                const formattedDate = appointmentDate.toLocaleDateString() + ' ' + appointmentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                // FIXED: Handle both customers and users object structures
+                const userObj = appointment.customers || appointment.users || {};
+                
+                appointmentItem.innerHTML = `
+                    <div class="appointment-info">
+                        <h3>${appointment.service}</h3>
+                        <p>Customer: ${userObj.name || 'N/A'}</p>
+                        <p>Date: ${formattedDate}</p>
+                        <p>Phone: ${userObj.phone || 'N/A'}</p>
+                        ${appointment.notes ? `<p>Notes: ${appointment.notes}</p>` : ''}
                     </div>
-                </td>
-                <td>${appointment.service}</td>
-                <td>${appointment.stylist || 'Not assigned'}</td>
-                <td>${formattedDate}</td>
-                <td>${appointment.users ? appointment.users.phone : 'N/A'}</td>
-                <td>
-                    <span class="status-badge status-${appointment.status}">
-                        ${appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-                    </span>
-                </td>
-                <td>
-                    ${appointment.status === 'pending' ? 
-                        `<button class="action-btn btn-confirm">Confirm</button>` : ''}
-                    <button class="action-btn btn-cancel">Cancel</button>
-                </td>
-            `;
-            
-            tbody.appendChild(row);
-        });
+                    <div class="appointment-actions">
+                        <span class="status-badge status-${appointment.status}">${appointment.status || 'pending'}</span>
+                        <div>
+                            <button class="btn-secondary" onclick="updateAppointmentStatus('${appointment.id}', 'confirmed')">Confirm</button>
+                            <button class="btn-secondary" onclick="updateAppointmentStatus('${appointment.id}', 'cancelled')">Cancel</button>
+                        </div>
+                    </div>
+                `;
+                appointmentsList.appendChild(appointmentItem);
+            });
+        }
+        return;
+    }
 
-        // Re-attach event listeners to confirm buttons
-        document.querySelectorAll('.btn-confirm').forEach(button => {
+    // Table view (business.html) - Basic version
+    const tbody = document.getElementById('appointmentsTbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    if (appointments.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No appointments found</td></tr>';
+        return;
+    }
+
+    appointments.forEach(appointment => {
+        const row = document.createElement('tr');
+        const appointmentDate = new Date(appointment.appointment_date);
+        const formattedDate = appointmentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + ' at ' + appointmentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        
+        // FIXED: Handle both customers and users object structures
+        const userObj = appointment.customers || appointment.users || {};
+        const customerName = userObj.name || 'N/A';
+        const avatarLetter = customerName.charAt(0).toUpperCase();
+        
+        row.innerHTML = `
+            <td>
+                <div class="customer-cell">
+                    <div class="customer-avatar">${avatarLetter}</div>
+                    <div>${customerName}</div>
+                </div>
+            </td>
+            <td>${appointment.service}</td>
+            <td>${appointment.stylist || 'Not assigned'}</td>
+            <td>${formattedDate}</td>
+            <td>${userObj.phone || 'N/A'}</td>
+            <td>
+                <span class="status-badge status-${appointment.status}">
+                    ${appointment.status ? appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1) : 'Pending'}
+                </span>
+            </td>
+            <td>
+                ${appointment.status === 'pending' ? `<button class="action-btn btn-confirm" data-appointment-id="${appointment.id}">Confirm</button>` : ''}
+                <button class="action-btn btn-cancel" data-appointment-id="${appointment.id}">Cancel</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+
+    // Attach confirm buttons to open the modal if present
+    const confirmationModal = document.getElementById('confirmationModal');
+    if (confirmationModal) {
+        document.querySelectorAll('.btn-confirm[data-appointment-id]').forEach(button => {
             button.addEventListener('click', function() {
                 const row = this.closest('tr');
-                const customerName = row.querySelector('.customer-cell div:last-child').textContent;
-                const service = row.cells[1].textContent;
-                const stylist = row.cells[2].textContent;
-                const dateTime = row.cells[3].textContent;
-                
-                document.getElementById('modalCustomer').textContent = customerName;
-                document.getElementById('modalService').textContent = service;
-                document.getElementById('modalStylist').textContent = stylist;
-                document.getElementById('modalDateTime').textContent = dateTime;
-                
-                document.getElementById('confirmationModal').style.display = 'flex';
+                if (row) {
+                    const modalCustomer = document.getElementById('modalCustomer');
+                    const modalService = document.getElementById('modalService');
+                    const modalStylist = document.getElementById('modalStylist');
+                    const modalDateTime = document.getElementById('modalDateTime');
+                    
+                    if (modalCustomer) modalCustomer.textContent = row.querySelector('.customer-cell div:last-child')?.textContent || '';
+                    if (modalService) modalService.textContent = row.cells[1]?.textContent || '';
+                    if (modalStylist) modalStylist.textContent = row.cells[2]?.textContent || '';
+                    if (modalDateTime) modalDateTime.textContent = row.cells[3]?.textContent || '';
+                    
+                    confirmationModal.dataset.appointmentId = this.getAttribute('data-appointment-id');
+                    confirmationModal.style.display = 'flex';
+                }
             });
         });
     }
+}
 
     function updateStats(appointments) {
         const today = new Date().toDateString();
