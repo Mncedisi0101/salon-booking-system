@@ -871,20 +871,24 @@
         <div class="salon-name" id="sidebarSalonName">Luxe Beauty Lounge</div>
         
         <ul class="sidebar-menu">
-            <li class="active">
+            <li class="active" data-tab="dashboard">
                 <i class="fas fa-home"></i>
                 <span class="menu-text">Dashboard</span>
             </li>
-            <li id="menuAppointments" class="menu-item-with-badge">
+            <li id="menuAppointments" data-tab="appointments">
                 <i class="fas fa-calendar-alt"></i>
                 <span class="menu-text">Appointments</span>
-                <span class="badge" id="appointmentBadge">3</span>
+                <span class="badge" id="appointmentBadge">0</span>
             </li>
-            <li id="menuStylists">
+            <li id="menuServices" data-tab="services">
+                <i class="fas fa-concierge-bell"></i>
+                <span class="menu-text">Services</span>
+            </li>
+            <li id="menuStylists" data-tab="stylists">
                 <i class="fas fa-user-tie"></i>
                 <span class="menu-text">Stylists</span>
             </li>
-            <li id="menuQRCode">
+            <li id="menuQRCode" data-tab="qrcode">
                 <i class="fas fa-qrcode"></i>
                 <span class="menu-text">QR Code</span>
             </li>
@@ -892,13 +896,13 @@
         
         <div class="sidebar-footer">
             <div class="user-info">
-                <div class="user-avatar">E</div>
+                <div class="user-avatar" id="userAvatar">E</div>
                 <div class="user-details">
                     <div class="user-name" id="dashboardOwnerName">Emma Johnson</div>
                     <div class="user-role">Salon Owner</div>
                 </div>
             </div>
-            <div class="logout-btn">
+            <div class="logout-btn" id="logoutBtn">
                 <i class="fas fa-sign-out-alt"></i>
                 <span class="logout-text">Logout</span>
             </div>
@@ -913,7 +917,7 @@
                 <p>Manage your salon appointments and stylists</p>
             </div>
             <div class="header-actions">
-                <div class="notification-btn" id="notificationBtn" title="New bookings">
+                <div class="notification-btn" id="notificationBtn" title="Notifications">
                     <i class="fas fa-bell"></i>
                     <div class="notification-badge" id="headerNotificationBadge" style="display:none">0</div>
                 </div>
@@ -932,7 +936,7 @@
                         <i class="fas fa-calendar-check"></i>
                     </div>
                     <div class="stat-info">
-                        <h3 id="todaysAppointmentsCount">8</h3>
+                        <h3 id="todaysAppointmentsCount">0</h3>
                         <p>Today's Appointments</p>
                     </div>
                 </div>
@@ -941,21 +945,25 @@
                         <i class="fas fa-clock"></i>
                     </div>
                     <div class="stat-info">
-                        <h3 id="pendingAppointmentsCount">3</h3>
+                        <h3 id="pendingAppointmentsCount">0</h3>
                         <p>Pending Confirmations</p>
                     </div>
                 </div>
             </div>
-            <!---Service Managemt-->
-            <div class="services-management-container">
-                <h2>Manage Services</h2>
-                <button id="addServiceBtn" class="btn-primary">Add New Service</button>
+
+            <!-- Services Management -->
+            <div class="services-management-container" id="servicesSection">
+                <div class="section-header">
+                    <h2>Manage Services</h2>
+                    <button id="addServiceBtn" class="btn-primary">Add New Service</button>
+                </div>
                 <div id="servicesList" class="services-list">
                     <!-- Services will be loaded here -->
                 </div>
             </div>
+
             <!-- Stylists Management Section -->
-            <div class="stylists-management-container">
+            <div class="stylists-management-container" id="stylistsSection">
                 <div class="section-header">
                     <h2>Manage Stylists</h2>
                     <button id="addStylistBtn" class="btn-primary">Add New Stylist</button>
@@ -964,7 +972,8 @@
                     <!-- Stylists will be loaded here -->
                 </div>
             </div>
-            <!-- Appointments Table -->
+
+            <!-- Appointments Section -->
             <div class="appointments-section" id="appointmentsSection">
                 <div class="section-header">
                     <h2>All Appointments</h2>
@@ -1043,9 +1052,6 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>
-                                    <input type="checkbox" id="selectAll">
-                                </th>
                                 <th>Customer</th>
                                 <th>Service</th>
                                 <th>Stylist</th>
@@ -1072,52 +1078,13 @@
                 </div>
             </div>
 
-            <!-- Notification Panel -->
-            <div class="notification-panel" id="notificationPanel">
-                <div class="notification-header">
-                    <h3>Notifications</h3>
-                    <button id="clearNotifications" class="btn-secondary" style="padding: 5px 10px; font-size: 12px;">
-                        Clear All
-                    </button>
-                </div>
-                <div class="notification-list" id="notificationList">
-                    <div class="no-notifications">
-                        <i class="fas fa-bell-slash" style="font-size: 24px; margin-bottom: 10px;"></i>
-                        <p>No new notifications</p>
-                    </div>
-                </div>
-            </div>
-
             <!-- Daily Schedule -->
             <div class="daily-schedule">
                 <div class="section-header">
                     <h2>Daily Schedule</h2>
                 </div>
                 <div class="schedule-slots" id="scheduleSlots">
-                    <div class="time-slot booked">
-                        <div class="time">9:00 AM</div>
-                        <div class="slot-info">Sarah Miller</div>
-                    </div>
-                    <div class="time-slot booked">
-                        <div class="time">10:30 AM</div>
-                        <div class="slot-info">Lisa Johnson</div>
-                    </div>
-                    <div class="time-slot available">
-                        <div class="time">12:00 PM</div>
-                        <div class="slot-info">Available</div>
-                    </div>
-                    <div class="time-slot available">
-                        <div class="time">1:30 PM</div>
-                        <div class="slot-info">Available</div>
-                    </div>
-                    <div class="time-slot booked">
-                        <div class="time">3:00 PM</div>
-                        <div class="slot-info">Robert Davis</div>
-                    </div>
-                    <div class="time-slot booked">
-                        <div class="time">4:30 PM</div>
-                        <div class="slot-info">Mia Thompson</div>
-                    </div>
+                    <!-- Schedule slots will be loaded here -->
                 </div>
             </div>
         </div>
@@ -1149,593 +1116,270 @@
     <!-- Stylists Modal -->
     <div id="stylistModal" class="modal hidden">
         <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2 id="stylistModalTitle">Add New Stylist</h2>
-            <form id="stylistForm">
-                <input type="hidden" id="editingStylistId" value="">
-                <div class="form-group">
-                    <label for="stylistName">Stylist Name *</label>
-                    <input type="text" id="stylistName" name="stylistName" required>
-                </div>
-                <div class="form-row">
+            <div class="modal-header">
+                <h2 id="stylistModalTitle">Add New Stylist</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="stylistForm">
+                    <input type="hidden" id="editingStylistId" value="">
                     <div class="form-group">
-                        <label for="stylistEmail">Email</label>
-                        <input type="email" id="stylistEmail" name="stylistEmail">
+                        <label for="stylistName">Stylist Name *</label>
+                        <input type="text" id="stylistName" name="stylistName" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="stylistEmail">Email</label>
+                            <input type="email" id="stylistEmail" name="stylistEmail">
+                        </div>
+                        <div class="form-group">
+                            <label for="stylistPhone">Phone</label>
+                            <input type="tel" id="stylistPhone" name="stylistPhone">
+                        </div>
                     </div>
                     <div class="form-group">
-                        <label for="stylistPhone">Phone</label>
-                        <input type="tel" id="stylistPhone" name="stylistPhone">
+                        <label for="stylistSpecialization">Specialization</label>
+                        <input type="text" id="stylistSpecialization" name="stylistSpecialization" placeholder="e.g., Hair Coloring, Haircuts, etc.">
                     </div>
-                </div>
-                <div class="form-group">
-                    <label for="stylistSpecialization">Specialization</label>
-                    <input type="text" id="stylistSpecialization" name="stylistSpecialization" placeholder="e.g., Hair Coloring, Haircuts, etc.">
-                </div>
-                <div class="form-group">
-                    <label for="stylistBio">Bio</label>
-                    <textarea id="stylistBio" name="stylistBio" rows="4" placeholder="Tell us about this stylist's experience and expertise..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="stylistImageUrl">Image URL</label>
-                    <input type="url" id="stylistImageUrl" name="stylistImageUrl" placeholder="https://example.com/image.jpg">
-                </div>
-                <div class="form-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="stylistActive" name="stylistActive" checked>
-                        <span class="checkmark"></span>
-                        Active (available for bookings)
-                    </label>
-                </div>
-                <div class="form-actions">
-                    <button type="button" id="cancelStylist" class="btn-secondary">Cancel</button>
-                    <button type="submit" class="btn-primary">Save Stylist</button>
-                </div>
-            </form>
+                    <div class="form-group">
+                        <label for="stylistBio">Bio</label>
+                        <textarea id="stylistBio" name="stylistBio" rows="4" placeholder="Tell us about this stylist's experience and expertise..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="stylistImageUrl">Image URL</label>
+                        <input type="url" id="stylistImageUrl" name="stylistImageUrl" placeholder="https://example.com/image.jpg">
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="stylistActive" name="stylistActive" checked>
+                            <span class="checkmark"></span>
+                            Active (available for bookings)
+                        </label>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" id="cancelStylist" class="btn-secondary">Cancel</button>
+                        <button type="submit" class="btn-primary">Save Stylist</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
+
     <!-- Add Service Modal -->
     <div id="serviceModal" class="modal hidden">
         <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2 id="serviceModalTitle">Add New Service</h2>
-            <form id="serviceForm">
-                <input type="hidden" id="editingServiceId">
-                <div class="form-group">
-                    <label for="serviceName">Service Name</label>
-                    <input type="text" id="serviceName" name="serviceName" required>
-                </div>
-                <div class="form-group">
-                    <label for="serviceDescription">Description</label>
-                    <textarea id="serviceDescription" name="serviceDescription" rows="3"></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="servicePrice">Price (R)</label>
-                    <input type="number" id="servicePrice" name="servicePrice" min="0" step="0.01" required>
-                </div>
-                <div class="form-group">
-                    <label for="serviceDuration">Duration (minutes)</label>
-                    <input type="number" id="serviceDuration" name="serviceDuration" min="1" required>
-                </div>
-                <button type="submit" class="btn-primary">Save Service</button>
-            </form>
+            <div class="modal-header">
+                <h2 id="serviceModalTitle">Add New Service</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="serviceForm">
+                    <input type="hidden" id="editingServiceId">
+                    <div class="form-group">
+                        <label for="serviceName">Service Name</label>
+                        <input type="text" id="serviceName" name="serviceName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="serviceDescription">Description</label>
+                        <textarea id="serviceDescription" name="serviceDescription" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="servicePrice">Price (R)</label>
+                        <input type="number" id="servicePrice" name="servicePrice" min="0" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="serviceDuration">Duration (minutes)</label>
+                        <input type="number" id="serviceDuration" name="serviceDuration" min="1" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" id="cancelService" class="btn-secondary">Cancel</button>
+                        <button type="submit" class="btn-primary">Save Service</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
     <!-- QR Code Modal -->
     <div class="modal hidden" id="qrModal">
         <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Business QR Code</h2>
-            <div id="modalQrCode" style="text-align:center; margin: 20px 0;"></div>
-            <div class="form-actions" style="justify-content: center;">
+            <div class="modal-header">
+                <h2>Business QR Code</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="modalQrCode" style="text-align:center; margin: 20px 0;"></div>
+            </div>
+            <div class="modal-footer">
                 <button id="downloadQrBtn" class="btn-secondary">Download</button>
                 <button id="printQrBtn" class="btn-primary">Print</button>
             </div>
         </div>
     </div>
 
+    <!-- Notification Dropdown -->
+    <div class="notification-dropdown hidden" id="notificationDropdown">
+        <div class="notification-header">
+            <h3>Notifications</h3>
+            <button id="clearNotifications" class="btn-secondary">Clear All</button>
+        </div>
+        <div class="notification-list" id="notificationList">
+            <!-- Notifications will be loaded here -->
+        </div>
+    </div>
+
     <script src="script.js"></script>
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Check if business user is logged in
-        const businessUser = localStorage.getItem('businessUser');
-        const userType = localStorage.getItem('userType');
-        
-        if (!businessUser || userType !== 'business') {
-            alert('Please login first');
-            window.location.href = 'customer.html?type=business';
-            return;
+        // Global variables
+        let currentBusinessId = null;
+        let currentPage = 1;
+        const appointmentsPerPage = 10;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Initializing business dashboard...');
+            
+            // Check authentication
+            const businessUser = localStorage.getItem('businessUser');
+            const userType = localStorage.getItem('userType');
+            
+            if (!businessUser || userType !== 'business') {
+                alert('Please login first');
+                window.location.href = 'customer.html?type=business';
+                return;
+            }
+
+            const user = JSON.parse(businessUser);
+            const urlParams = new URLSearchParams(window.location.search);
+            const businessId = urlParams.get('id');
+            
+            // Verify business ownership
+            if (user.id !== businessId) {
+                alert('Access denied');
+                window.location.href = 'customer.html?type=business';
+                return;
+            }
+
+            currentBusinessId = businessId;
+            
+            // Initialize dashboard
+            initializeDashboard(user);
+            loadBusinessData();
+            loadAppointments();
+            loadServices();
+            loadStylists();
+            initNotificationPolling();
+
+            // Set up event listeners
+            setupEventListeners();
+            
+            // Update current date
+            updateCurrentDate();
+            setInterval(updateCurrentDate, 60000);
+        });
+
+        function initializeDashboard(businessUser) {
+            document.getElementById('sidebarSalonName').textContent = businessUser.name;
+            document.getElementById('dashboardTitle').textContent = businessUser.name + " Dashboard";
+            document.getElementById('dashboardOwnerName').textContent = businessUser.name.split(' ')[0] || 'Owner';
+            document.getElementById('userAvatar').textContent = businessUser.name.charAt(0).toUpperCase();
         }
 
-        const user = JSON.parse(businessUser);
-        const urlParams = new URLSearchParams(window.location.search);
-        const businessId = urlParams.get('id');
-        
-        // Verify the logged-in business owns this dashboard
-        if (user.id !== businessId) {
-            alert('Access denied');
-            window.location.href = 'customer.html?type=business';
-            return;
+        function setupEventListeners() {
+            // Logout
+            document.getElementById('logoutBtn').addEventListener('click', function() {
+                localStorage.removeItem('businessUser');
+                localStorage.removeItem('userType');
+                window.location.href = 'customer.html?type=business';
+            });
+
+            // Sidebar navigation
+            document.querySelectorAll('.sidebar-menu li').forEach(item => {
+                item.addEventListener('click', function() {
+                    const tab = this.getAttribute('data-tab');
+                    navigateToTab(tab);
+                });
+            });
+
+            // Modal close buttons
+            document.querySelectorAll('.close-modal').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    this.closest('.modal').classList.add('hidden');
+                });
+            });
+
+            // Filter changes
+            document.getElementById('dateRange')?.addEventListener('change', handleDateRangeChange);
+            document.getElementById('stylistFilter')?.addEventListener('change', loadAppointments);
+            document.getElementById('statusFilter')?.addEventListener('change', loadAppointments);
+            document.getElementById('startDate')?.addEventListener('change', loadAppointments);
+            document.getElementById('endDate')?.addEventListener('change', loadAppointments);
+
+            // Pagination
+            document.getElementById('prevPage')?.addEventListener('click', () => changePage(-1));
+            document.getElementById('nextPage')?.addEventListener('click', () => changePage(1));
+
+            // Export
+            document.getElementById('exportBtn')?.addEventListener('click', exportAppointments);
+
+            // Notification button
+            document.getElementById('notificationBtn')?.addEventListener('click', toggleNotifications);
         }
 
-        currentBusinessId = businessId;
-        
-        // Initialize dashboard with business data
-        initializeDashboard(user);
-        loadBusinessData();
-        loadAppointments();
+        function navigateToTab(tab) {
+            // Update active menu item
+            document.querySelectorAll('.sidebar-menu li').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
 
-        // Real-time current date updater
+            // Scroll to section
+            const section = document.getElementById(tab + 'Section');
+            if (section) {
+                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            // Special handling for QR code
+            if (tab === 'qrcode') {
+                openQRModal();
+            }
+        }
+
+        function handleDateRangeChange() {
+            const dateRange = document.getElementById('dateRange').value;
+            const customRange = document.getElementById('customDateRange');
+            const customRangeEnd = document.getElementById('customDateRangeEnd');
+
+            if (dateRange === 'custom') {
+                customRange.style.display = 'flex';
+                customRangeEnd.style.display = 'flex';
+            } else {
+                customRange.style.display = 'none';
+                customRangeEnd.style.display = 'none';
+                loadAppointments();
+            }
+        }
+
         function updateCurrentDate() {
             const now = new Date();
             const options = { year: 'numeric', month: 'long', day: 'numeric' };
             const el = document.getElementById('currentDate');
             if (el) el.textContent = now.toLocaleDateString('en-US', options);
         }
-        updateCurrentDate();
-        setInterval(updateCurrentDate, 60000);
-        
-        // Modal functionality
-        const confirmationModal = document.getElementById('confirmationModal');
-        const stylistsModal = document.getElementById('stylistsModal');
-        const closeModalButtons = document.querySelectorAll('.close-modal, .btn-cancel');
-       
-        
-        // Open modals
-        document.querySelectorAll('.btn-confirm').forEach(button => {
-            if (!button.closest('.modal')) {
-                button.addEventListener('click', function() {
-                    // Get appointment data from the row
-                    const row = this.closest('tr');
-                    if (row) {
-                        const customerName = row.querySelector('.customer-cell div:last-child').textContent;
-                        const service = row.cells[1].textContent;
-                        const stylist = row.cells[2].textContent;
-                        const dateTime = row.cells[3].textContent;
-                        
-                        document.getElementById('modalCustomer').textContent = customerName;
-                        document.getElementById('modalService').textContent = service;
-                        document.getElementById('modalStylist').textContent = stylist;
-                        document.getElementById('modalDateTime').textContent = dateTime;
-                    }
-                    confirmationModal.style.display = 'flex';
-                });
-            }
-        });
-        
-        document.getElementById('menuStylists').addEventListener('click', function() {
-            stylistsModal.style.display = 'flex';
-        });
-        // Close modals
-        closeModalButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                confirmationModal.style.display = 'none';
-                stylistsModal.style.display = 'none';
-            });
-        });
-        // Add stylist functionality
-        document.getElementById('addStylistBtn').addEventListener('click', function() {
-            const newStylistName = document.getElementById('newStylistName').value;
-            if (newStylistName.trim() !== '') {
-                const stylistsList = document.getElementById('stylistsList');
-                const newStylist = document.createElement('div');
-                newStylist.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid #f0f0f0;">
-                        <div>${newStylistName}</div>
-                        <button class="action-btn btn-cancel">Remove</button>
-                    </div>
-                `;
-                stylistsList.appendChild(newStylist);
-                document.getElementById('newStylistName').value = '';
-                
-                // Add remove functionality to the new button
-                newStylist.querySelector('.btn-cancel').addEventListener('click', function() {
-                    stylistsList.removeChild(newStylist);
-                });
-            }
-        });
-        
-        // Add remove functionality to existing remove buttons
-        document.querySelectorAll('#stylistsList .btn-cancel').forEach(button => {
-            button.addEventListener('click', function() {
-                const stylistItem = this.closest('div');
-                stylistItem.parentNode.removeChild(stylistItem);
-            });
-        });
-        
-        // Close modal if clicked outside
-        window.addEventListener('click', function(event) {
-            if (event.target === confirmationModal) {
-                confirmationModal.style.display = 'none';
-            }
-            if (event.target === stylistsModal) {
-                stylistsModal.style.display = 'none';
-            }
-        });
 
-        // Logout functionality
-        document.querySelector('.logout-btn').addEventListener('click', function() {
-            localStorage.removeItem('businessUser');
-            localStorage.removeItem('userType');
-            window.location.href = 'customer.html?type=business';
-        });
-
-        // Filter functionality
-        document.getElementById('datePicker').addEventListener('change', loadAppointments);
-        document.getElementById('stylistFilter').addEventListener('change', loadAppointments);
-        document.getElementById('statusFilter').addEventListener('change', loadAppointments);
-
-        // Sidebar: Appointments navigation and calendar
-        const appointmentsMenu = document.getElementById('menuAppointments');
-        if (appointmentsMenu) {
-            appointmentsMenu.addEventListener('click', function() {
-                // highlight active menu
-                document.querySelectorAll('.sidebar-menu li').forEach(li => li.classList.remove('active'));
-                appointmentsMenu.classList.add('active');
-                // scroll to section
-                const apptSection = document.querySelector('.appointments-section');
-                if (apptSection) apptSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                // open calendar for date filter
-                const dp = document.getElementById('datePicker');
-                if (dp) {
-                    dp.focus();
-                    if (typeof dp.showPicker === 'function') {
-                        try { dp.showPicker(); } catch(e) {}
-                    }
-                }
-            });
-        }
-
-        // Sidebar: QR Code modal with download/print
-        const qrMenu = document.getElementById('menuQRCode');
-        const qrModal = document.getElementById('qrModal');
-        const modalQrCode = document.getElementById('modalQrCode');
-        const downloadQrBtn = document.getElementById('downloadQrBtn');
-        const printQrBtn = document.getElementById('printQrBtn');
-
-        if (qrMenu && qrModal && modalQrCode) {
-            qrMenu.addEventListener('click', async function() {
-                try {
-                    const resp = await fetch('/api/qrcode', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ businessId: currentBusinessId })
-                    });
-                    const data = await resp.json();
-                    if (!resp.ok) throw new Error(data.error || 'Failed to generate QR code');
-                    modalQrCode.innerHTML = `<img id="qrImage" src="${data.qrCode}" alt="QR Code" style="max-width: 260px;">`;
-                    qrModal.classList.remove('hidden');
-                    qrModal.style.display = 'flex';
-                } catch (err) {
-                    alert('Error generating QR code: ' + err.message);
-                }
-            });
-        }
-
-        // Close QR modal
-        const qrClose = document.querySelector('#qrModal .close');
-        if (qrClose) {
-            qrClose.addEventListener('click', function() {
-                qrModal.classList.add('hidden');
-                qrModal.style.display = 'none';
-            });
-        }
-        window.addEventListener('click', function(e) {
-            if (e.target === qrModal) {
-                qrModal.classList.add('hidden');
-                qrModal.style.display = 'none';
-            }
-        });
-
-        // Download QR
-        if (downloadQrBtn) {
-            downloadQrBtn.addEventListener('click', function() {
-                const img = document.getElementById('qrImage');
-                if (!img || !img.src) return;
-                const a = document.createElement('a');
-                a.href = img.src;
-                a.download = 'salon-qr-code.png';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-            });
-        }
-
-        // Print QR
-        if (printQrBtn) {
-            printQrBtn.addEventListener('click', function() {
-                const img = document.getElementById('qrImage');
-                if (!img || !img.src) return;
-                const printWindow = window.open('', '_blank');
-                if (!printWindow) return;
-                printWindow.document.write('<html><head><title>Print QR Code</title></head><body style="text-align:center; margin:0; padding:20px;">');
-                printWindow.document.write(`<img src="${img.src}" style="max-width:80vw;">`);
-                printWindow.document.write('</body></html>');
-                printWindow.document.close();
-                printWindow.focus();
-                printWindow.print();
-                printWindow.close();
-            });
-        }
-
-        // Real-time notification polling for new bookings
-        const notificationBtn = document.getElementById('notificationBtn');
-        const headerNotificationBadge = document.getElementById('headerNotificationBadge');
-        let lastSeenCreatedAt = null;
-        let latestKnownCreatedAt = null;
-
-        // Enhanced notification polling for new bookings
-        let lastPollTime = null;
-
-        async function pollNewAppointments() {
+        async function loadBusinessData() {
             try {
-                console.log('Polling for new appointments...');
-                const url = `/api/appointments?businessId=${currentBusinessId}&page=1&limit=50`;
-                const response = await fetch(url);
-                
-                if (!response.ok) return;
-                
+                const response = await fetch(`/api/business?id=${currentBusinessId}`);
                 const result = await response.json();
-                const appointments = Array.isArray(result.appointments) ? result.appointments : [];
                 
-                // Filter new appointments since last poll
-                const newAppointments = appointments.filter(appointment => {
-                    const appointmentTime = new Date(appointment.created_at || appointment.appointment_date);
-                    return !lastPollTime || appointmentTime > lastPollTime;
-                });
-                
-                console.log(`Found ${newAppointments.length} new appointments since last poll`);
-                
-                if (newAppointments.length > 0) {
-                    newAppointments.forEach(appointment => {
-                        const customerData = appointment.customers || appointment.users || {};
-                        const customerName = customerData.name || 'A customer';
-                        
-                        addNotification(
-                            'New Booking Received',
-                            `${customerName} booked ${appointment.service || 'a service'}`,
-                            'new_booking'
-                        );
-                    });
-                    
-                    // Refresh appointments list if new ones were found
-                    loadAppointments();
-                }
-                
-                // Update last poll time to current time
-                lastPollTime = new Date();
-                
-            } catch (error) {
-                console.warn('Notification poll failed:', error);
-            }
-        }
-
-        // Start polling: every 15 seconds
-        setInterval(pollNewAppointments, 15000);
-        // Seed baseline shortly after load
-        setTimeout(pollNewAppointments, 1000);
-
-        if (notificationBtn && headerNotificationBadge) {
-            notificationBtn.addEventListener('click', () => {
-                // Acknowledge: set last seen to latest known and clear badge
-                if (latestKnownCreatedAt) {
-                    lastSeenCreatedAt = latestKnownCreatedAt;
+                if (response.ok) {
+                    console.log('Business data loaded:', result.business);
                 } else {
-                    lastSeenCreatedAt = new Date();
+                    console.error('Error loading business data:', result.error);
                 }
-                headerNotificationBadge.textContent = '0';
-                headerNotificationBadge.style.display = 'none';
-                try { loadAppointments(); } catch(_) {}
-            });
-        }
-    });
-
-    function initializeDashboard(businessUser) {
-        // Set business name in sidebar and dashboard
-        document.getElementById('sidebarSalonName').textContent = businessUser.name;
-        document.getElementById('dashboardTitle').textContent = businessUser.name + " Dashboard";
-        document.getElementById('dashboardOwnerName').textContent = businessUser.name.split(' ')[0] || 'Owner';
-    }
-
-    async function loadBusinessData() {
-        try {
-            const response = await fetch(`/api/business?id=${currentBusinessId}`);
-            const result = await response.json();
-            
-            if (response.ok) {
-                // Update any additional business data if needed
-                console.log('Business data loaded:', result.business);
-            } else {
-                console.error('Error loading business data:', result.error);
+            } catch (error) {
+                console.error('Error loading business data:', error);
             }
-        } catch (error) {
-            console.error('Error loading business data:', error);
         }
-    }
-    async function loadAppointments() {
-        try {
-            // Get filter values
-            const dateFilter = document.getElementById('datePicker').value;
-            const stylistFilter = document.getElementById('stylistFilter').value;
-            const statusFilter = document.getElementById('statusFilter').value;
-            
-            let url = `/api/appointments?businessId=${currentBusinessId}`;
-            
-            // Add filters to URL
-            const params = new URLSearchParams();
-            if (dateFilter) params.append('date', dateFilter);
-            if (stylistFilter !== 'all') params.append('stylist', stylistFilter);
-            if (statusFilter !== 'all') params.append('status', statusFilter);
-            
-            if (params.toString()) {
-                url += '&' + params.toString();
-            }
-            
-            const response = await fetch(url);
-            const result = await response.json();
-            
-            if (response.ok) {
-                displayAppointments(result.appointments || []);
-                updateStats(result.appointments || []);
-            } else {
-                console.error('Error loading appointments:', result.error);
-            }
-        } catch (error) {
-            console.error('Error loading appointments:', error);
-        }
-    }
-
-    function displayAppointments(appointments) {
-    // Card list view (if exists)
-    const appointmentsList = document.getElementById('appointmentsList');
-    if (appointmentsList) {
-        appointmentsList.innerHTML = '';
-        if (appointments.length === 0) {
-            appointmentsList.innerHTML = '<p class="no-appointments">No appointments scheduled</p>';
-        } else {
-            appointments.forEach(appointment => {
-                const appointmentItem = document.createElement('div');
-                appointmentItem.className = 'appointment-item';
-                const appointmentDate = new Date(appointment.appointment_date);
-                const formattedDate = appointmentDate.toLocaleDateString() + ' ' + appointmentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                
-                // FIXED: Handle both customers and users object structures
-                const userObj = appointment.customers || appointment.users || {};
-                
-                appointmentItem.innerHTML = `
-                    <div class="appointment-info">
-                        <h3>${appointment.service}</h3>
-                        <p>Customer: ${userObj.name || 'N/A'}</p>
-                        <p>Date: ${formattedDate}</p>
-                        <p>Phone: ${userObj.phone || 'N/A'}</p>
-                        ${appointment.notes ? `<p>Notes: ${appointment.notes}</p>` : ''}
-                    </div>
-                    <div class="appointment-actions">
-                        <span class="status-badge status-${appointment.status}">${appointment.status || 'pending'}</span>
-                        <div>
-                            <button class="btn-secondary" onclick="updateAppointmentStatus('${appointment.id}', 'confirmed')">Confirm</button>
-                            <button class="btn-secondary" onclick="updateAppointmentStatus('${appointment.id}', 'cancelled')">Cancel</button>
-                        </div>
-                    </div>
-                `;
-                appointmentsList.appendChild(appointmentItem);
-            });
-        }
-        return;
-    }
-
-    // Table view (business.html) - Basic version
-    const tbody = document.getElementById('appointmentsTbody');
-    if (!tbody) return;
-
-    tbody.innerHTML = '';
-    if (appointments.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No appointments found</td></tr>';
-        return;
-    }
-
-    appointments.forEach(appointment => {
-        const row = document.createElement('tr');
-        const appointmentDate = new Date(appointment.appointment_date);
-        const formattedDate = appointmentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + ' at ' + appointmentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-        
-        // FIXED: Handle both customers and users object structures
-        const userObj = appointment.customers || appointment.users || {};
-        const customerName = userObj.name || 'N/A';
-        const avatarLetter = customerName.charAt(0).toUpperCase();
-        
-        row.innerHTML = `
-            <td>
-                <div class="customer-cell">
-                    <div class="customer-avatar">${avatarLetter}</div>
-                    <div>${customerName}</div>
-                </div>
-            </td>
-            <td>${appointment.service}</td>
-            <td>${appointment.stylist || 'Not assigned'}</td>
-            <td>${formattedDate}</td>
-            <td>${userObj.phone || 'N/A'}</td>
-            <td>
-                <span class="status-badge status-${appointment.status}">
-                    ${appointment.status ? appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1) : 'Pending'}
-                </span>
-            </td>
-            <td>
-                ${appointment.status === 'pending' ? `<button class="action-btn btn-confirm" data-appointment-id="${appointment.id}">Confirm</button>` : ''}
-                <button class="action-btn btn-cancel" data-appointment-id="${appointment.id}">Cancel</button>
-            </td>
-        `;
-        tbody.appendChild(row);
-    });
-
-    // Attach confirm buttons to open the modal if present
-    const confirmationModal = document.getElementById('confirmationModal');
-    if (confirmationModal) {
-        document.querySelectorAll('.btn-confirm[data-appointment-id]').forEach(button => {
-            button.addEventListener('click', function() {
-                const row = this.closest('tr');
-                if (row) {
-                    const modalCustomer = document.getElementById('modalCustomer');
-                    const modalService = document.getElementById('modalService');
-                    const modalStylist = document.getElementById('modalStylist');
-                    const modalDateTime = document.getElementById('modalDateTime');
-                    
-                    if (modalCustomer) modalCustomer.textContent = row.querySelector('.customer-cell div:last-child')?.textContent || '';
-                    if (modalService) modalService.textContent = row.cells[1]?.textContent || '';
-                    if (modalStylist) modalStylist.textContent = row.cells[2]?.textContent || '';
-                    if (modalDateTime) modalDateTime.textContent = row.cells[3]?.textContent || '';
-                    
-                    confirmationModal.dataset.appointmentId = this.getAttribute('data-appointment-id');
-                    confirmationModal.style.display = 'flex';
-                }
-            });
-        });
-    }
-}
-
-    function updateStats(appointments) {
-        const today = new Date().toDateString();
-        const todayAppointments = appointments.filter(apt => 
-            new Date(apt.appointment_date).toDateString() === today
-        );
-        
-        const pendingAppointments = appointments.filter(apt => 
-            apt.status === 'pending'
-        );
-        
-        document.getElementById('todaysAppointmentsCount').textContent = todayAppointments.length;
-        document.getElementById('pendingAppointmentsCount').textContent = pendingAppointments.length;
-        
-        // Update appointment badge in sidebar
-        document.getElementById('appointmentBadge').textContent = pendingAppointments.length;
-    }
-
-    // Handle appointment confirmation
-    document.getElementById('modalConfirmBtn')?.addEventListener('click', async function() {
-        try {
-            // In a real implementation, you would send the appointment ID to update the status
-            const response = await fetch('/api/appointments', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ 
-                    id: 'appointment-id', // You would get this from the row data
-                    status: 'confirmed' 
-                })
-            });
-            
-            if (response.ok) {
-                document.getElementById('confirmationModal').style.display = 'none';
-                loadAppointments(); // Refresh the appointments
-            } else {
-                alert('Error confirming appointment');
-            }
-        } catch (error) {
-            console.error('Error confirming appointment:', error);
-            alert('Error confirming appointment');
-        }
-    });
-</script>
+    </script>
 </body>
 </html>

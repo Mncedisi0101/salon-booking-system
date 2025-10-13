@@ -1135,13 +1135,13 @@ async function handleStylistFormSubmit() {
             phone: document.getElementById('stylistPhone').value,
             specialization: document.getElementById('stylistSpecialization').value,
             bio: document.getElementById('stylistBio').value,
-            imageUrl: document.getElementById('stylistImageUrl').value,
-            isActive: document.getElementById('stylistActive').checked
+            image_url: document.getElementById('stylistImageUrl').value,
+            is_active: document.getElementById('stylistActive').checked
         };
 
-        console.log('Stylist data to save:', stylistData);
+        console.log('Submitting stylist data:', stylistData);
 
-        const editingStylistId = document.getElementById('editingStylistId').value;
+        const editingStylistId = document.getElementById('editingStylistId')?.value;
         let result;
 
         if (editingStylistId) {
@@ -1155,6 +1155,7 @@ async function handleStylistFormSubmit() {
         }
 
         if (result) {
+            console.log('Stylist saved successfully:', result);
             closeStylistModal();
             await loadStylists(); // Reload the stylists list
             showNotification('Stylist saved successfully!', 'success');
@@ -1170,9 +1171,11 @@ async function handleStylistFormSubmit() {
 }
 
 async function loadStylists() {
+    console.log('Loading stylists for business:', currentBusinessId);
+    
     const stylistsList = document.getElementById('stylistsList');
     if (!stylistsList) {
-        console.log('Stylists list container not found');
+        console.error('Stylists list container not found!');
         return;
     }
 
@@ -1195,31 +1198,23 @@ async function loadStylists() {
         stylistsList.innerHTML = '';
         
         stylists.forEach(stylist => {
-            const stylistCard = document.createElement('div');
-            stylistCard.className = 'stylist-card';
-            
-            const firstName = stylist.name.split(' ')[0];
-            const avatarContent = stylist.image_url 
-                ? `<img src="${stylist.image_url}" alt="${stylist.name}" onerror="this.style.display='none'; this.parentElement.innerHTML='${firstName.charAt(0).toUpperCase()}'">`
-                : firstName.charAt(0).toUpperCase();
-            
-            stylistCard.innerHTML = `
-                <div class="stylist-header">
-                    <div class="stylist-avatar ${stylist.image_url ? 'has-image' : ''}">
-                        ${avatarContent}
-                    </div>
-                    <div class="stylist-info">
-                        <div class="stylist-name">${stylist.name}</div>
-                        ${stylist.specialization ? `<div class="stylist-specialization">${stylist.specialization}</div>` : ''}
-                        ${stylist.email ? `<div class="stylist-contact">${stylist.email}</div>` : ''}
-                        ${stylist.phone ? `<div class="stylist-contact">${stylist.phone}</div>` : ''}
-                        <div class="stylist-status ${stylist.is_active ? 'active' : 'inactive'}">
-                            <span class="stylist-status-dot"></span>
-                            ${stylist.is_active ? 'Active' : 'Inactive'}
+            const stylistItem = document.createElement('div');
+            stylistItem.className = 'stylist-item';
+            stylistItem.innerHTML = `
+                <div class="stylist-info">
+                    ${stylist.image_url ? `
+                        <div class="stylist-image">
+                            <img src="${stylist.image_url}" alt="${stylist.name}" onerror="this.style.display='none'">
                         </div>
+                    ` : ''}
+                    <div class="stylist-details">
+                        <h3>${stylist.name} ${!stylist.is_active ? '<span class="inactive-badge">Inactive</span>' : ''}</h3>
+                        ${stylist.specialization ? `<p class="stylist-specialization">${stylist.specialization}</p>` : ''}
+                        ${stylist.email ? `<p class="stylist-contact">${stylist.email}</p>` : ''}
+                        ${stylist.phone ? `<p class="stylist-contact">${stylist.phone}</p>` : ''}
+                        ${stylist.bio ? `<p class="stylist-bio">${stylist.bio}</p>` : ''}
                     </div>
                 </div>
-                ${stylist.bio ? `<div class="stylist-bio">${stylist.bio}</div>` : ''}
                 <div class="stylist-actions">
                     <button class="stylist-action-btn stylist-edit" onclick="editStylist('${stylist.id}')">
                         Edit
@@ -1229,7 +1224,7 @@ async function loadStylists() {
                     </button>
                 </div>
             `;
-            stylistsList.appendChild(stylistCard);
+            stylistsList.appendChild(stylistItem);
         });
 
     } catch (error) {
@@ -1238,53 +1233,6 @@ async function loadStylists() {
     }
 }
 
-async function editStylist(stylistId) {
-    try {
-        const stylists = await loadBusinessStylists(currentBusinessId);
-        const stylist = stylists.find(s => s.id === stylistId);
-        
-        if (stylist) {
-            openStylistModal(stylist);
-        } else {
-            throw new Error('Stylist not found');
-        }
-    } catch (error) {
-        console.error('Error editing stylist:', error);
-        showNotification('Error loading stylist details', 'error');
-    }
-}
-
-async function deleteStylist(stylistId) {
-    if (!confirm('Are you sure you want to delete this stylist? This action cannot be undone.')) {
-        return;
-    }
-
-    try {
-        const stylistCard = document.querySelector(`[onclick="editStylist('${stylistId}')"]`)?.closest('.stylist-card');
-        if (stylistCard) {
-            stylistCard.classList.add('loading');
-        }
-
-        const response = await fetch(`/api/stylists?id=${stylistId}`, {
-            method: 'DELETE'
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-            await loadStylists(); // Reload the stylists list
-            showNotification('Stylist deleted successfully!', 'success');
-        } else {
-            throw new Error(result.error || 'Failed to delete stylist');
-        }
-
-    } catch (error) {
-        console.error('Error deleting stylist:', error);
-        showNotification('Error deleting stylist: ' + error.message, 'error');
-    }
-}
-
-// API Functions for Stylists
 async function loadBusinessStylists(businessId) {
     try {
         const response = await fetch(`/api/stylists?businessId=${businessId}`);
@@ -1311,9 +1259,9 @@ async function createStylist(stylistData) {
             },
             body: JSON.stringify(stylistData)
         });
-
+        
         const result = await response.json();
-
+        
         if (response.ok) {
             return result.stylist;
         } else {
@@ -1351,75 +1299,405 @@ async function updateStylist(stylistId, stylistData) {
     }
 }
 
-// Utility function for notifications
-function showNotification(message, type = 'info') {
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.textContent = message;
-    
-    // Add styles for notification
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 15px 20px;
-        border-radius: 5px;
-        color: white;
-        font-weight: 500;
-        z-index: 10000;
-        animation: slideIn 0.3s ease;
-        max-width: 300px;
-    `;
-    
-    if (type === 'success') {
-        notification.style.backgroundColor = '#4caf50';
-    } else if (type === 'error') {
-        notification.style.backgroundColor = '#f44336';
-    } else {
-        notification.style.backgroundColor = '#ff9800';
+async function editStylist(stylistId) {
+    try {
+        const stylists = await loadBusinessStylists(currentBusinessId);
+        const stylist = stylists.find(s => s.id === stylistId);
+        
+        if (stylist) {
+            openStylistModal(stylist);
+        } else {
+            throw new Error('Stylist not found');
+        }
+    } catch (error) {
+        console.error('Error editing stylist:', error);
+        showNotification('Error loading stylist details', 'error');
     }
+}
+
+async function deleteStylist(stylistId) {
+    if (!confirm('Are you sure you want to delete this stylist? This action cannot be undone.')) {
+        return;
+    }
+
+    try {
+        const stylistItem = document.querySelector(`[onclick="editStylist('${stylistId}')"]`)?.closest('.stylist-item');
+        if (stylistItem) {
+            stylistItem.classList.add('loading');
+        }
+
+        const response = await fetch(`/api/stylists?id=${stylistId}`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            await loadStylists(); // Reload the stylists list
+            showNotification('Stylist deleted successfully!', 'success');
+        } else {
+            throw new Error(result.error || 'Failed to delete stylist');
+        }
+
+    } catch (error) {
+        console.error('Error deleting stylist:', error);
+        showNotification('Error deleting stylist: ' + error.message, 'error');
+    }
+}
+
+// APPOINTMENT MANAGEMENT FUNCTIONS - FIXED VERSION
+async function loadAppointments() {
+    console.log('Loading appointments for business:', currentBusinessId);
+    
+    const appointmentsList = document.getElementById('appointmentsList');
+    if (!appointmentsList) {
+        console.error('Appointments list container not found!');
+        return;
+    }
+
+    try {
+        appointmentsList.innerHTML = '<div class="loading">Loading appointments...</div>';
+        
+        // FIXED: Check if currentBusinessId exists before making the request
+        if (!currentBusinessId) {
+            console.error('No business ID available for loading appointments');
+            appointmentsList.innerHTML = '<div class="error">Business ID not found. Please refresh the page.</div>';
+            return;
+        }
+
+        const response = await fetch(`/api/appointments?businessId=${currentBusinessId}&page=${currentPage}&limit=${appointmentsPerPage}`);
+        
+        if (!response.ok) {
+            throw new Error(`Failed to load appointments: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to load appointments');
+        }
+
+        const appointments = result.appointments || [];
+        const totalAppointments = result.total || 0;
+        const totalPages = Math.ceil(totalAppointments / appointmentsPerPage);
+
+        console.log('Loaded appointments:', appointments);
+        
+        if (appointments.length === 0) {
+            appointmentsList.innerHTML = `
+                <div class="no-appointments">
+                    <p>No appointments found.</p>
+                    <p>Appointments will appear here when customers book your services.</p>
+                </div>
+            `;
+            updatePaginationControls(totalPages);
+            return;
+        }
+
+        appointmentsList.innerHTML = '';
+        
+        appointments.forEach(appointment => {
+            const appointmentItem = document.createElement('div');
+            appointmentItem.className = `appointment-item ${appointment.status}`;
+            appointmentItem.innerHTML = `
+                <div class="appointment-header">
+                    <h3>${appointment.service_name || 'Service'}</h3>
+                    <span class="appointment-status ${appointment.status}">${appointment.status}</span>
+                </div>
+                <div class="appointment-details">
+                    <p><strong>Customer:</strong> ${appointment.customer_name} (${appointment.customer_email})</p>
+                    <p><strong>Date & Time:</strong> ${formatAppointmentDate(appointment.appointment_date)}</p>
+                    <p><strong>Duration:</strong> ${appointment.service_duration || 30} minutes</p>
+                    <p><strong>Price:</strong> R${appointment.service_price || '0'}</p>
+                    ${appointment.stylist_name ? `<p><strong>Stylist:</strong> ${appointment.stylist_name}</p>` : ''}
+                    ${appointment.notes ? `<p><strong>Notes:</strong> ${appointment.notes}</p>` : ''}
+                </div>
+                <div class="appointment-actions">
+                    ${appointment.status === 'pending' ? `
+                        <button class="appointment-action-btn confirm" onclick="updateAppointmentStatus('${appointment.id}', 'confirmed')">
+                            Confirm
+                        </button>
+                        <button class="appointment-action-btn cancel" onclick="updateAppointmentStatus('${appointment.id}', 'cancelled')">
+                            Cancel
+                        </button>
+                    ` : ''}
+                    ${appointment.status === 'confirmed' ? `
+                        <button class="appointment-action-btn complete" onclick="updateAppointmentStatus('${appointment.id}', 'completed')">
+                            Complete
+                        </button>
+                        <button class="appointment-action-btn cancel" onclick="updateAppointmentStatus('${appointment.id}', 'cancelled')">
+                            Cancel
+                        </button>
+                    ` : ''}
+                    ${appointment.status === 'completed' || appointment.status === 'cancelled' ? `
+                        <button class="appointment-action-btn delete" onclick="deleteAppointment('${appointment.id}')">
+                            Delete
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+            appointmentsList.appendChild(appointmentItem);
+        });
+
+        updatePaginationControls(totalPages);
+
+    } catch (error) {
+        console.error('Error loading appointments:', error);
+        appointmentsList.innerHTML = '<div class="error">Error loading appointments. Please try again.</div>';
+    }
+}
+
+function updatePaginationControls(totalPages) {
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
+    const pageInfo = document.getElementById('pageInfo');
+
+    if (prevBtn) {
+        prevBtn.disabled = currentPage <= 1;
+        prevBtn.style.opacity = currentPage <= 1 ? '0.5' : '1';
+    }
+
+    if (nextBtn) {
+        nextBtn.disabled = currentPage >= totalPages;
+        nextBtn.style.opacity = currentPage >= totalPages ? '0.5' : '1';
+    }
+
+    if (pageInfo) {
+        pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
+    }
+}
+
+function changePage(direction) {
+    const newPage = currentPage + direction;
+    if (newPage < 1) return;
+    
+    currentPage = newPage;
+    loadAppointments();
+}
+
+function formatAppointmentDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+async function updateAppointmentStatus(appointmentId, status) {
+    try {
+        const response = await fetch('/api/appointments', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id: appointmentId,
+                status: status
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showNotification(`Appointment ${status} successfully!`, 'success');
+            await loadAppointments(); // Reload the appointments list
+            
+            // Add notification for status change
+            addNotification(`Appointment status changed to ${status}`, 'info');
+            
+        } else {
+            throw new Error(result.error || 'Failed to update appointment');
+        }
+
+    } catch (error) {
+        console.error('Error updating appointment:', error);
+        showNotification('Error updating appointment: ' + error.message, 'error');
+    }
+}
+
+async function deleteAppointment(appointmentId) {
+    if (!confirm('Are you sure you want to delete this appointment? This action cannot be undone.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/appointments?id=${appointmentId}`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showNotification('Appointment deleted successfully!', 'success');
+            await loadAppointments(); // Reload the appointments list
+        } else {
+            throw new Error(result.error || 'Failed to delete appointment');
+        }
+
+    } catch (error) {
+        console.error('Error deleting appointment:', error);
+        showNotification('Error deleting appointment: ' + error.message, 'error');
+    }
+}
+
+// NOTIFICATION FUNCTIONS - FIXED VERSION
+function initNotificationPolling() {
+    console.log('Initializing notification polling...');
+    
+    // Load existing notifications
+    loadNotifications();
+    
+    // Set up polling for new notifications every 30 seconds
+    setInterval(() => {
+        loadNotifications();
+    }, 30000);
+    
+    // Set up notification button
+    const notificationBtn = document.getElementById('notificationBtn');
+    const notificationDropdown = document.getElementById('notificationDropdown');
+    
+    if (notificationBtn && notificationDropdown) {
+        notificationBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            notificationDropdown.classList.toggle('hidden');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function() {
+            notificationDropdown.classList.add('hidden');
+        });
+    }
+}
+
+function loadNotifications() {
+    const notificationList = document.getElementById('notificationList');
+    const notificationCount = document.getElementById('notificationCount');
+    
+    if (!notificationList) return;
+    
+    // Get notifications from localStorage
+    const notifications = JSON.parse(localStorage.getItem('businessNotifications') || '[]');
+    
+    // Update notification count
+    if (notificationCount) {
+        const unreadCount = notifications.filter(n => !n.read).length;
+        notificationCount.textContent = unreadCount;
+        notificationCount.style.display = unreadCount > 0 ? 'flex' : 'none';
+    }
+    
+    // Update notification list
+    if (notifications.length === 0) {
+        notificationList.innerHTML = '<div class="no-notifications">No notifications</div>';
+        return;
+    }
+    
+    notificationList.innerHTML = '';
+    notifications.slice(0, 10).forEach(notification => {
+        const notificationItem = document.createElement('div');
+        notificationItem.className = `notification-item ${notification.read ? 'read' : 'unread'}`;
+        notificationItem.innerHTML = `
+            <div class="notification-content">
+                <p class="notification-message">${notification.message}</p>
+                <small class="notification-time">${formatNotificationTime(notification.timestamp)}</small>
+            </div>
+            ${!notification.read ? `
+                <button class="mark-read-btn" onclick="markNotificationAsRead('${notification.id}')">
+                    Mark as read
+                </button>
+            ` : ''}
+        `;
+        notificationList.appendChild(notificationItem);
+    });
+}
+
+function addNotification(message, type = 'info') {
+    const notification = {
+        id: generateId(),
+        message: message,
+        type: type,
+        read: false,
+        timestamp: new Date().toISOString()
+    };
+    
+    const notifications = JSON.parse(localStorage.getItem('businessNotifications') || '[]');
+    notifications.unshift(notification);
+    
+    // Keep only the last 50 notifications
+    if (notifications.length > 50) {
+        notifications.splice(50);
+    }
+    
+    localStorage.setItem('businessNotifications', JSON.stringify(notifications));
+    
+    // Update UI
+    loadNotifications();
+    
+    // Show toast notification
+    showNotification(message, type);
+}
+
+function markNotificationAsRead(notificationId) {
+    const notifications = JSON.parse(localStorage.getItem('businessNotifications') || '[]');
+    const notification = notifications.find(n => n.id === notificationId);
+    
+    if (notification) {
+        notification.read = true;
+        localStorage.setItem('businessNotifications', JSON.stringify(notifications));
+        loadNotifications();
+    }
+}
+
+function formatNotificationTime(timestamp) {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffMs = now - time;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    return time.toLocaleDateString();
+}
+
+function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+function showNotification(message, type = 'info') {
+    // Remove any existing notification
+    const existingNotification = document.querySelector('.notification-toast');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+    
+    const notification = document.createElement('div');
+    notification.className = `notification-toast ${type}`;
+    notification.innerHTML = `
+        <div class="notification-content">
+            <span class="notification-message">${message}</span>
+            <button class="notification-close" onclick="this.parentElement.parentElement.remove()">×</button>
+        </div>
+    `;
     
     document.body.appendChild(notification);
     
-    // Remove notification after 3 seconds
+    // Auto-remove after 5 seconds
     setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
-    }, 3000);
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
 }
 
-// Add these animations to your CSS
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-    
-    @keyframes slideOut {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-    }
-`;
-document.head.appendChild(style);
-
+// Appointment booking function
 async function handleAppointmentBooking(appointmentData) {
     try {
         const response = await fetch('/api/appointments', {
@@ -1429,9 +1707,9 @@ async function handleAppointmentBooking(appointmentData) {
             },
             body: JSON.stringify(appointmentData)
         });
-        
+
         const result = await response.json();
-        
+
         if (response.ok) {
             return result.appointment;
         } else {
@@ -1443,939 +1721,143 @@ async function handleAppointmentBooking(appointmentData) {
     }
 }
 
-// Update the DOM Content Loaded function
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded - initializing application');
-    
-    // Business Registration Page
-    if (document.getElementById('businessForm')) {
-        console.log('Initializing business registration');
-        initBusinessAuthentication();
-        initBusinessRegistration();
-        handleBusinessLoginRedirect(); 
-    }
-    
-    // Customer Booking Page
-    if (document.getElementById('authSection')) {
-        console.log('Initializing customer authentication');
-        initCustomerAuthentication();
-        
-        // Get business ID from URL
-        const urlParams = new URLSearchParams(window.location.search);
-        currentBusinessId = urlParams.get('business');
-        
-        if (!currentBusinessId) {
-            // If no business ID, check if user is trying to login as business
-            const userType = localStorage.getItem('userType');
-            const businessUser = localStorage.getItem('businessUser');
-            
-            if (userType === 'business' && businessUser) {
-                // Redirect to business dashboard
-                const user = JSON.parse(businessUser);
-                window.location.href = `business.html?id=${user.id}`;
-                return;
-            }
-            
-            // Show business login tab by default if no business ID
-            const businessTab = document.querySelector('[data-tab="business"]');
-            if (businessTab) businessTab.click();
-        } else {
-            // Load business info if business ID is present
-            loadBusinessInfo();
-            
-            // Check if customer is already logged in
-            const customerUser = localStorage.getItem('customerUser');
-            const userType = localStorage.getItem('userType');
-            
-            if (customerUser && userType === 'customer' && currentBusinessId) {
-                const user = JSON.parse(customerUser);
-                // Verify this customer belongs to the current business
-                if (user.business_id === currentBusinessId) {
-                    currentUserId = user.id;
-                    showBookingForm(user);
-                }
-            }
-        }
-        
-        // Check if business user is already logged in
-        const businessUser = localStorage.getItem('businessUser');
-        const userType = localStorage.getItem('userType');
-        
-        if (businessUser && userType === 'business') {
-            const user = JSON.parse(businessUser);
-            document.getElementById('authSection').classList.add('hidden');
-            document.getElementById('businessRedirect').classList.remove('hidden');
-        }
-    }
-    
-    // Business Dashboard
-    if (document.getElementById('dashboardTitle')) {
-        console.log('Initializing business dashboard');
-        initBusinessDashboard();
-        initNotificationSystem();
-        initEnhancedAppointments();
-         initNotificationPolling();
-        
-        // Check if business user is logged in
-        const businessUser = localStorage.getItem('businessUser');
-        const userType = localStorage.getItem('userType');
-        
-        if (businessUser && userType === 'business') {
-            const user = JSON.parse(businessUser);
-            const urlParams = new URLSearchParams(window.location.search);
-            const businessId = urlParams.get('id');
-            
-            // Verify the logged-in business owns this dashboard
-            if (user.id === businessId) {
-                currentBusinessId = businessId;
-                initializeDashboard(user);
-                loadBusinessData();
-                loadAppointments();
-                loadServices(); // Load services when dashboard loads
-                loadStylists(); // Load stylists when dashboard loads
-            } else {
-                alert('Access denied');
-                window.location.href = 'customer.html?type=business';
-            }
-        } else {
-            alert('Please login first');
-            window.location.href = 'customer.html?type=business';
-        }
-    }
-});
-
-// Business Dashboard Functions
-function initializeDashboard(businessUser) {
-    const sidebarName = document.getElementById('sidebarSalonName');
-    if (sidebarName) sidebarName.textContent = businessUser.name;
-    const title = document.getElementById('dashboardTitle');
-    if (title) title.textContent = businessUser.name + ' Dashboard';
-    const owner = document.getElementById('dashboardOwnerName');
-    if (owner) owner.textContent = (businessUser.name || '').split(' ')[0] || 'Owner';
-}
-
+// BUSINESS DASHBOARD INITIALIZATION - FIXED VERSION
 function initBusinessDashboard() {
-    const refreshBtn = document.getElementById('refreshBtn');
-    const qrBtn = document.getElementById('qrBtn');
-    const closeModal = document.querySelector('.close');
-    const modal = document.getElementById('qrModal');
+    console.log('Initializing business dashboard...');
     
     // Get business ID from URL
     const urlParams = new URLSearchParams(window.location.search);
     currentBusinessId = urlParams.get('id');
     
+    console.log('Business ID from URL:', currentBusinessId);
+    
+    // FIXED: Check if business ID exists and is valid
     if (!currentBusinessId) {
-        alert('Invalid business dashboard link');
+        console.error('No business ID found in URL');
+        showNotification('Invalid business URL. Please use the correct dashboard link.', 'error');
         return;
     }
     
-    // Load business data
-    loadBusinessData();
-    loadAppointments();
-
-    // Set current date display
-    const currentDateEl = document.getElementById('currentDate');
-    if (currentDateEl) {
-        const now = new Date();
-        const options = { year: 'numeric', month: 'long', day: 'numeric' };
-        currentDateEl.textContent = now.toLocaleDateString('en-US', options);
+    // Check if user is logged in as business
+    const businessUser = JSON.parse(localStorage.getItem('businessUser') || 'null');
+    const userType = localStorage.getItem('userType');
+    
+    console.log('Business user from storage:', businessUser);
+    console.log('User type from storage:', userType);
+    
+    if (!businessUser || userType !== 'business') {
+        console.log('No business user found, redirecting to login...');
+        // Redirect to customer page for business login
+        window.location.href = 'customer.html?type=business';
+        return;
     }
     
-    // Initialize service management
-    initServiceManagement();
+    // Verify the business user matches the URL
+    if (businessUser.id !== currentBusinessId) {
+        console.error('Business user ID does not match URL ID');
+        showNotification('Access denied. Please login with the correct business account.', 'error');
+        return;
+    }
     
-    // Initialize stylist management
+    currentUserId = businessUser.id;
+    currentUserType = 'business';
+    currentBusinessData = businessUser;
+    
+    console.log('Business dashboard initialized for:', businessUser.name);
+    
+    // Update business info in dashboard
+    updateBusinessInfo(businessUser);
+    
+    // Initialize dashboard sections
+    initDashboardTabs();
+    initServiceManagement();
     initStylistManagement();
     
-    // Logout
-    const logoutEl = document.querySelector('.logout-btn');
-    if (logoutEl) {
-        logoutEl.addEventListener('click', function() {
-            localStorage.removeItem('businessUser');
-            localStorage.removeItem('userType');
-            window.location.href = 'customer.html?type=business';
-        });
-    }
-
-    // Filters
-    const datePicker = document.getElementById('datePicker');
-    const stylistFilter = document.getElementById('stylistFilter');
-    const statusFilter = document.getElementById('statusFilter');
-    [datePicker, stylistFilter, statusFilter].forEach(el => {
-        if (el) el.addEventListener('change', () => loadAppointments());
-    });
-
-    // Confirmation modal handler
-    const modalConfirmBtn = document.getElementById('modalConfirmBtn');
-    const confirmationModal = document.getElementById('confirmationModal');
-    if (modalConfirmBtn && confirmationModal) {
-        modalConfirmBtn.addEventListener('click', async function() {
-            const aptId = confirmationModal.dataset.appointmentId;
-            if (!aptId) {
-                confirmationModal.style.display = 'none';
-                return;
-            }
-            try {
-                const resp = await fetch('/api/appointments', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: aptId, status: 'confirmed' })
-                });
-                if (resp.ok) {
-                    confirmationModal.style.display = 'none';
-                    loadAppointments();
-                } else {
-                    alert('Error confirming appointment');
-                }
-            } catch (e) {
-                console.error('Confirm error', e);
-            }
-        });
-    }
-    
-    // Close modals by clicking X
-    document.querySelectorAll('.close-modal').forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (confirmationModal) confirmationModal.style.display = 'none';
-        });
-    });
-
-    // Refresh button
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', function() {
-            loadAppointments();
-        });
-    }
-    
-    // QR code button
-    if (qrBtn) {
-        qrBtn.addEventListener('click', async function() {
-            try {
-                const response = await fetch('/api/qrcode', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ businessId: currentBusinessId })
-                });
-                
-                const result = await response.json();
-                
-                if (response.ok) {
-                    document.getElementById('modalQrCode').innerHTML = `<img src="${result.qrCode}" alt="QR Code">`;
-                    modal.classList.remove('hidden');
-                } else {
-                    alert('Error: ' + result.error);
-                }
-            } catch (error) {
-                alert('Error generating QR code: ' + error.message);
-            }
-        });
-    }
-    
-    // Close modal
-    if (closeModal) {
-        closeModal.addEventListener('click', function() {
-            modal.classList.add('hidden');
-        });
-    }
-    
-    // Close modal when clicking outside
-    if (modal) {
-        window.addEventListener('click', function(e) {
-            if (e.target === modal) {
-                modal.classList.add('hidden');
-            }
-        });
-    }
-}
-
-async function loadBusinessData() {
+    // FIXED: Load appointments with proper error handling
     try {
-        const response = await fetch(`/api/business?id=${currentBusinessId}`);
-        const result = await response.json();
-        
-        if (response.ok) {
-            document.getElementById('dashboardTitle').textContent = result.business.name + " Dashboard";
-        } else {
-            alert('Error: ' + result.error);
-        }
-    } catch (error) {
-        alert('Error loading business data: ' + error.message);
-    }
-}
-// Appointment Booking Functions
-function initNotificationSystem() {
-    const notificationBtn = document.getElementById('notificationBtn');
-    const notificationPanel = document.getElementById('notificationPanel');
-    const clearNotificationsBtn = document.getElementById('clearNotifications');
-    
-    if (notificationBtn && notificationPanel) {
-        notificationBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            notificationPanel.classList.toggle('active');
-            markAllNotificationsAsRead();
-            updateNotificationBadge();
-        });
-        
-        // Close notification panel when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!notificationPanel.contains(e.target) && !notificationBtn.contains(e.target)) {
-                notificationPanel.classList.remove('active');
-            }
-        });
-    }
-    
-    if (clearNotificationsBtn) {
-        clearNotificationsBtn.addEventListener('click', clearAllNotifications);
-    }
-    
-    updateNotificationDisplay();
-}
-
-function addNotification(title, message, type = 'info') {
-    const notification = {
-        id: Date.now().toString(),
-        title,
-        message,
-        type,
-        timestamp: new Date().toISOString(),
-        read: false
-    };
-    
-    notifications.unshift(notification);
-    if (notifications.length > 50) {
-        notifications = notifications.slice(0, 50);
-    }
-    
-    localStorage.setItem('businessNotifications', JSON.stringify(notifications));
-    updateNotificationDisplay();
-    updateNotificationBadge();
-    
-    // Show desktop notification if supported
-    if ("Notification" in window && Notification.permission === "granted") {
-        new Notification(title, { body: message, icon: '/favicon.ico' });
-    }
-}
-
-function updateNotificationDisplay() {
-    const notificationList = document.getElementById('notificationList');
-    if (!notificationList) return;
-    
-    if (notifications.length === 0) {
-        notificationList.innerHTML = `
-            <div class="no-notifications">
-                <i class="fas fa-bell-slash" style="font-size: 24px; margin-bottom: 10px;"></i>
-                <p>No new notifications</p>
-            </div>
-        `;
-        return;
-    }
-    
-    notificationList.innerHTML = notifications.map(notification => `
-        <div class="notification-item ${notification.read ? '' : 'unread'}" 
-             onclick="handleNotificationClick('${notification.id}')">
-            <div class="notification-title">${notification.title}</div>
-            <div class="notification-message">${notification.message}</div>
-            <div class="notification-time">${formatTimeAgo(notification.timestamp)}</div>
-        </div>
-    `).join('');
-}
-
-function handleNotificationClick(notificationId) {
-    const notification = notifications.find(n => n.id === notificationId);
-    if (notification) {
-        notification.read = true;
-        localStorage.setItem('businessNotifications', JSON.stringify(notifications));
-        updateNotificationDisplay();
-        updateNotificationBadge();
-        
-        // Handle notification action
-        if (notification.type === 'new_booking') {
-            document.getElementById('notificationPanel').classList.remove('active');
-            // Scroll to appointments section
-            document.getElementById('appointmentsSection').scrollIntoView({ behavior: 'smooth' });
-        }
-    }
-}
-
-function markAllNotificationsAsRead() {
-    notifications.forEach(notification => {
-        notification.read = true;
-    });
-    localStorage.setItem('businessNotifications', JSON.stringify(notifications));
-    updateNotificationDisplay();
-    updateNotificationBadge();
-}
-
-function clearAllNotifications() {
-    if (confirm('Are you sure you want to clear all notifications?')) {
-        notifications = [];
-        localStorage.setItem('businessNotifications', JSON.stringify(notifications));
-        updateNotificationDisplay();
-        updateNotificationBadge();
-    }
-}
-
-function updateNotificationBadge() {
-    const badge = document.getElementById('headerNotificationBadge');
-    if (!badge) return;
-    
-    const unreadCount = notifications.filter(n => !n.read).length;
-    badge.textContent = unreadCount > 99 ? '99+' : unreadCount.toString();
-    badge.style.display = unreadCount > 0 ? 'flex' : 'none';
-}
-
-function formatTimeAgo(timestamp) {
-    const now = new Date();
-    const time = new Date(timestamp);
-    const diffInSeconds = Math.floor((now - time) / 1000);
-    
-    if (diffInSeconds < 60) return 'Just now';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    return `${Math.floor(diffInSeconds / 86400)}d ago`;
-}
-
-//  Appointments Management
-function initEnhancedAppointments() {
-    // Date range filter with null checks
-    const dateRange = document.getElementById('dateRange');
-    const customDateRange = document.getElementById('customDateRange');
-    const customDateRangeEnd = document.getElementById('customDateRangeEnd');
-    
-    if (dateRange && customDateRange && customDateRangeEnd) {
-        dateRange.addEventListener('change', function() {
-            if (this.value === 'custom') {
-                customDateRange.style.display = 'flex';
-                customDateRangeEnd.style.display = 'flex';
-            } else {
-                customDateRange.style.display = 'none';
-                customDateRangeEnd.style.display = 'none';
-                loadAppointments();
-            }
-        });
-    }
-    
-    // Custom date range listeners with null checks
-    const startDate = document.getElementById('startDate');
-    const endDate = document.getElementById('endDate');
-    if (startDate && endDate) {
-        startDate.addEventListener('change', loadAppointments);
-        endDate.addEventListener('change', loadAppointments);
-    }
-    
-    // Export functionality with null check
-    const exportBtn = document.getElementById('exportBtn');
-    if (exportBtn) {
-        exportBtn.addEventListener('click', exportAppointments);
-    }
-    
-    // Pagination with null checks
-    const prevPage = document.getElementById('prevPage');
-    const nextPage = document.getElementById('nextPage');
-    if (prevPage && nextPage) {
-        prevPage.addEventListener('click', () => changePage(-1));
-        nextPage.addEventListener('click', () => changePage(1));
-    }
-    
-    // Select all functionality with null check
-    const selectAll = document.getElementById('selectAll');
-    if (selectAll) {
-        selectAll.addEventListener('change', function() {
-            const checkboxes = document.querySelectorAll('#appointmentsTbody input[type="checkbox"]');
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = this.checked;
-            });
-        });
-    }
-    
-    // Request notification permission
-    if ("Notification" in window) {
-        Notification.requestPermission();
-    }
-}
-function changePage(direction) {
-    currentPage += direction;
-    if (currentPage < 1) currentPage = 1;
-    loadAppointments();
-}
-
-// Consolidated loadAppointments function - REPLACE ALL DUPLICATES WITH THIS
-async function loadAppointments() {
-    try {
-        console.log('Loading appointments for business:', currentBusinessId);
-        
-        // Get filter values
-        const dateRange = document.getElementById('dateRange')?.value || 'today';
-        const startDate = document.getElementById('startDate')?.value;
-        const endDate = document.getElementById('endDate')?.value;
-        const stylistFilter = document.getElementById('stylistFilter')?.value || 'all';
-        const statusFilter = document.getElementById('statusFilter')?.value || 'all';
-        const dateFilter = document.getElementById('datePicker')?.value;
-        
-        let url = `/api/appointments?businessId=${currentBusinessId}`;
-        
-        // Add enhanced filters to URL (for business dashboard)
-        const params = new URLSearchParams();
-        
-        // Enhanced date range filter
-        if (dateRange === 'custom' && startDate && endDate) {
-            params.append('startDate', startDate);
-            params.append('endDate', endDate);
-        } else if (dateRange !== 'custom' && dateRange) {
-            params.append('dateRange', dateRange);
-        }
-        
-        // Basic date filter (for backward compatibility)
-        if (dateFilter && !dateRange) {
-            params.append('date', dateFilter);
-        }
-        
-        if (stylistFilter !== 'all') params.append('stylist', stylistFilter);
-        if (statusFilter !== 'all') params.append('status', statusFilter);
-        
-        // Add pagination for enhanced view
-        const appointmentsTbody = document.getElementById('appointmentsTbody');
-        if (appointmentsTbody && document.querySelector('.pagination')) {
-            params.append('page', currentPage);
-            params.append('limit', appointmentsPerPage);
-        }
-        
-        if (params.toString()) {
-            url += '&' + params.toString();
-        }
-        
-        console.log('Fetching appointments from:', url);
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        console.log('Appointments API response:', result);
-        
-        if (result.appointments) {
-            const appointments = result.appointments || [];
-            console.log(`Found ${appointments.length} appointments`);
-            
-            // Use enhanced display if available (business dashboard)
-            if (document.getElementById('appointmentsTbody') && document.querySelector('.table-container')) {
-                console.log('Using enhanced appointments display');
-                displayEnhancedAppointments(appointments);
-                updateAppointmentSummary(appointments);
-                if (result.totalCount !== undefined) {
-                    updatePagination(result.totalCount);
-                }
-            } else {
-                // Use basic display for other pages
-                console.log('Using basic appointments display');
-                displayAppointments(appointments);
-            }
-            
-            updateStats(appointments);
-            
-        } else {
-            console.error('No appointments in response:', result);
-            showNoAppointmentsMessage();
-        }
-        
+        loadAppointments();
     } catch (error) {
         console.error('Error loading appointments:', error);
-        showErrorMessage('Failed to load appointments: ' + error.message);
-    }
-}
-function showNoAppointmentsMessage() {
-    const tbody = document.getElementById('appointmentsTbody');
-    const appointmentsList = document.getElementById('appointmentsList');
-    
-    if (tbody) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="8" style="text-align: center; padding: 40px;">
-                    <i class="fas fa-calendar-times" style="font-size: 48px; color: var(--gray); margin-bottom: 15px;"></i>
-                    <p>No appointments found</p>
-                    <p style="font-size: 14px; color: var(--gray);">Try adjusting your filters</p>
-                </td>
-            </tr>
-        `;
-    }
-    if (appointmentsList) {
-        appointmentsList.innerHTML = '<p class="no-appointments">No appointments scheduled</p>';
-    }
-}
-
-function showErrorMessage(message) {
-    const tbody = document.getElementById('appointmentsTbody');
-    const appointmentsList = document.getElementById('appointmentsList');
-    
-    if (tbody) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px; color: var(--danger);">${message}</td></tr>`;
-    }
-    if (appointmentsList) {
-        appointmentsList.innerHTML = `<p class="error-message">${message}</p>`;
-    }
-}
-function displayEnhancedAppointments(appointments) {
-    const tbody = document.getElementById('appointmentsTbody');
-    if (!tbody) {
-        console.error('Appointments table body not found');
-        return;
+        showNotification('Error loading appointments', 'error');
     }
     
-    tbody.innerHTML = '';
+    // FIXED: Initialize notification polling
+    initNotificationPolling();
     
-    if (appointments.length === 0) {
-        showNoAppointmentsMessage();
-        return;
-    }
-    
-    console.log('Displaying enhanced appointments:', appointments);
-    
-    appointments.forEach(appointment => {
-        const row = document.createElement('tr');
-        const appointmentDate = new Date(appointment.appointment_date);
-        const formattedDate = appointmentDate.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-        }) + ' at ' + appointmentDate.toLocaleTimeString('en-US', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
+    // Set up logout functionality
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            localStorage.removeItem('businessUser');
+            localStorage.removeItem('userType');
+            window.location.href = 'customer.html';
         });
-        
-        // FIXED: Handle both customers and users object structures
-        const customerData = appointment.customers || appointment.users || {};
-        const customerName = customerData.name || 'N/A';
-        const customerEmail = customerData.email || 'N/A';
-        const customerPhone = customerData.phone || 'N/A';
-        const avatarLetter = customerName.charAt(0).toUpperCase();
-        
-        // FIXED: Handle service data properly
-        const serviceData = appointment.services || {};
-        const serviceName = appointment.service || serviceData.name || 'N/A';
-        const servicePrice = serviceData.price || 'N/A';
-        
-        row.innerHTML = `
-            <td>
-                <input type="checkbox" class="appointment-checkbox" value="${appointment.id}">
-            </td>
-            <td>
-                <div class="customer-cell">
-                    <div class="customer-avatar">${avatarLetter}</div>
-                    <div>
-                        <div class="customer-name">${customerName}</div>
-                        <div class="customer-email">${customerEmail}</div>
-                    </div>
-                </div>
-            </td>
-            <td>
-                <div class="service-info">
-                    <div class="service-name">${serviceName}</div>
-                    ${servicePrice !== 'N/A' ? `<div class="service-price">R${servicePrice}</div>` : ''}
-                </div>
-            </td>
-            <td>${appointment.stylist || 'Not assigned'}</td>
-            <td>
-                <div class="datetime-info">
-                    <div class="date">${formattedDate}</div>
-                    <div class="time-ago">${formatTimeAgo(appointment.appointment_date)}</div>
-                </div>
-            </td>
-            <td>
-                <div class="contact-info">
-                    <div class="phone">${customerPhone}</div>
-                    <div class="email">${customerEmail}</div>
-                </div>
-            </td>
-            <td>
-                <span class="status-badge status-${appointment.status}">
-                    ${appointment.status ? appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1) : 'Pending'}
-                </span>
-            </td>
-            <td>
-                <div class="action-buttons">
-                    ${appointment.status === 'pending' ? 
-                        `<button class="action-btn btn-confirm" data-appointment-id="${appointment.id}">
-                            <i class="fas fa-check"></i> Confirm
-                        </button>` : ''}
-                    <button class="action-btn btn-edit" data-appointment-id="${appointment.id}">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="action-btn btn-cancel" data-appointment-id="${appointment.id}">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </td>
-        `;
-        
-        tbody.appendChild(row);
-    });
+    }
     
-    // Attach event listeners
-    attachAppointmentEventListeners();
-}
-function updateAppointmentSummary(appointments) {
-    const pendingCount = appointments.filter(apt => apt.status === 'pending').length;
-    const confirmedCount = appointments.filter(apt => apt.status === 'confirmed').length;
-    const totalCount = appointments.length;
-    
-    document.getElementById('pendingCount').textContent = pendingCount;
-    document.getElementById('confirmedCount').textContent = confirmedCount;
-    document.getElementById('totalCount').textContent = totalCount;
+    // Show dashboard
+    document.getElementById('dashboard').classList.remove('hidden');
 }
 
-function updatePagination(totalCount) {
-    const totalPages = Math.ceil(totalCount / appointmentsPerPage);
-    const pageInfo = document.getElementById('pageInfo');
-    const prevPage = document.getElementById('prevPage');
-    const nextPage = document.getElementById('nextPage');
+function updateBusinessInfo(business) {
+    const businessNameElement = document.getElementById('businessNameDisplay');
+    const businessEmailElement = document.getElementById('businessEmailDisplay');
+    const businessPhoneElement = document.getElementById('businessPhoneDisplay');
+    const businessAddressElement = document.getElementById('businessAddressDisplay');
     
-    if (pageInfo) {
-        pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-    }
-    
-    if (prevPage) {
-        prevPage.disabled = currentPage === 1;
-    }
-    
-    if (nextPage) {
-        nextPage.disabled = currentPage === totalPages;
-    }
+    if (businessNameElement) businessNameElement.textContent = business.name;
+    if (businessEmailElement) businessEmailElement.textContent = business.email;
+    if (businessPhoneElement) businessPhoneElement.textContent = business.phone;
+    if (businessAddressElement) businessAddressElement.textContent = business.address;
 }
 
-function attachAppointmentEventListeners() {
-    // Confirm buttons
-    document.querySelectorAll('.btn-confirm').forEach(button => {
+function initDashboardTabs() {
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabButtons.forEach(button => {
         button.addEventListener('click', function() {
-            const appointmentId = this.getAttribute('data-appointment-id');
-            confirmAppointment(appointmentId);
-        });
-    });
-    
-    // Edit buttons
-    document.querySelectorAll('.btn-edit').forEach(button => {
-        button.addEventListener('click', function() {
-            const appointmentId = this.getAttribute('data-appointment-id');
-            editAppointment(appointmentId);
-        });
-    });
-    
-    // Cancel buttons
-    document.querySelectorAll('.btn-cancel').forEach(button => {
-        button.addEventListener('click', function() {
-            const appointmentId = this.getAttribute('data-appointment-id');
-            cancelAppointment(appointmentId);
-        });
-    });
-}
-
-async function confirmAppointment(appointmentId) {
-    try {
-        const response = await fetch('/api/appointments', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: appointmentId, status: 'confirmed' })
-        });
-        
-        if (response.ok) {
-            loadAppointments();
-            addNotification('Appointment Confirmed', 'Appointment has been confirmed successfully', 'success');
-        } else {
-            alert('Error confirming appointment');
-        }
-    } catch (error) {
-        console.error('Error confirming appointment:', error);
-        alert('Error confirming appointment');
-    }
-}
-
-async function cancelAppointment(appointmentId) {
-    if (!confirm('Are you sure you want to cancel this appointment?')) return;
-    
-    try {
-        const response = await fetch('/api/appointments', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: appointmentId, status: 'cancelled' })
-        });
-        
-        if (response.ok) {
-            loadAppointments();
-            addNotification('Appointment Cancelled', 'Appointment has been cancelled', 'warning');
-        } else {
-            alert('Error cancelling appointment');
-        }
-    } catch (error) {
-        console.error('Error cancelling appointment:', error);
-        alert('Error cancelling appointment');
-    }
-}
-
-function editAppointment(appointmentId) {
-    // Implement edit functionality
-    alert('Edit appointment: ' + appointmentId);
-}
-
-function exportAppointments() {
-    // Implement export functionality
-    alert('Export functionality would be implemented here');
-}
-
-function displayAppointments(appointments) {
-    // Card list view (if exists)
-    const appointmentsList = document.getElementById('appointmentsList');
-    if (appointmentsList) {
-        appointmentsList.innerHTML = '';
-        if (appointments.length === 0) {
-            appointmentsList.innerHTML = '<p class="no-appointments">No appointments scheduled</p>';
-        } else {
-            appointments.forEach(appointment => {
-                const appointmentItem = document.createElement('div');
-                appointmentItem.className = 'appointment-item';
-                const appointmentDate = new Date(appointment.appointment_date);
-                const formattedDate = appointmentDate.toLocaleDateString() + ' ' + appointmentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                
-                // FIXED: Handle both customers and users object structures
-                const userObj = appointment.customers || appointment.users || {};
-                
-                appointmentItem.innerHTML = `
-                    <div class="appointment-info">
-                        <h3>${appointment.service}</h3>
-                        <p>Customer: ${userObj.name || 'N/A'}</p>
-                        <p>Date: ${formattedDate}</p>
-                        <p>Phone: ${userObj.phone || 'N/A'}</p>
-                        ${appointment.notes ? `<p>Notes: ${appointment.notes}</p>` : ''}
-                    </div>
-                    <div class="appointment-actions">
-                        <span class="status-badge status-${appointment.status}">${appointment.status || 'pending'}</span>
-                        <div>
-                            <button class="btn-secondary" onclick="updateAppointmentStatus('${appointment.id}', 'confirmed')">Confirm</button>
-                            <button class="btn-secondary" onclick="updateAppointmentStatus('${appointment.id}', 'cancelled')">Cancel</button>
-                        </div>
-                    </div>
-                `;
-                appointmentsList.appendChild(appointmentItem);
-            });
-        }
-        return;
-    }
-
-    // Table view (business.html) - Basic version
-    const tbody = document.getElementById('appointmentsTbody');
-    if (!tbody) return;
-
-    tbody.innerHTML = '';
-    if (appointments.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No appointments found</td></tr>';
-        return;
-    }
-
-    appointments.forEach(appointment => {
-        const row = document.createElement('tr');
-        const appointmentDate = new Date(appointment.appointment_date);
-        const formattedDate = appointmentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + ' at ' + appointmentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-        
-        // FIXED: Handle both customers and users object structures
-        const userObj = appointment.customers || appointment.users || {};
-        const customerName = userObj.name || 'N/A';
-        const avatarLetter = customerName.charAt(0).toUpperCase();
-        
-        row.innerHTML = `
-            <td>
-                <div class="customer-cell">
-                    <div class="customer-avatar">${avatarLetter}</div>
-                    <div>${customerName}</div>
-                </div>
-            </td>
-            <td>${appointment.service}</td>
-            <td>${appointment.stylist || 'Not assigned'}</td>
-            <td>${formattedDate}</td>
-            <td>${userObj.phone || 'N/A'}</td>
-            <td>
-                <span class="status-badge status-${appointment.status}">
-                    ${appointment.status ? appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1) : 'Pending'}
-                </span>
-            </td>
-            <td>
-                ${appointment.status === 'pending' ? `<button class="action-btn btn-confirm" data-appointment-id="${appointment.id}">Confirm</button>` : ''}
-                <button class="action-btn btn-cancel" data-appointment-id="${appointment.id}">Cancel</button>
-            </td>
-        `;
-        tbody.appendChild(row);
-    });
-
-    // Attach confirm buttons to open the modal if present
-    const confirmationModal = document.getElementById('confirmationModal');
-    if (confirmationModal) {
-        document.querySelectorAll('.btn-confirm[data-appointment-id]').forEach(button => {
-            button.addEventListener('click', function() {
-                const row = this.closest('tr');
-                if (row) {
-                    const modalCustomer = document.getElementById('modalCustomer');
-                    const modalService = document.getElementById('modalService');
-                    const modalStylist = document.getElementById('modalStylist');
-                    const modalDateTime = document.getElementById('modalDateTime');
-                    
-                    if (modalCustomer) modalCustomer.textContent = row.querySelector('.customer-cell div:last-child')?.textContent || '';
-                    if (modalService) modalService.textContent = row.cells[1]?.textContent || '';
-                    if (modalStylist) modalStylist.textContent = row.cells[2]?.textContent || '';
-                    if (modalDateTime) modalDateTime.textContent = row.cells[3]?.textContent || '';
-                    
-                    confirmationModal.dataset.appointmentId = this.getAttribute('data-appointment-id');
-                    confirmationModal.style.display = 'flex';
+            const targetTab = this.getAttribute('data-tab');
+            
+            // Update active tab button
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Show target tab content
+            tabContents.forEach(content => {
+                content.classList.add('hidden');
+                if (content.id === targetTab) {
+                    content.classList.remove('hidden');
                 }
             });
+            
+            // Load data for the tab if needed
+            if (targetTab === 'appointments') {
+                loadAppointments();
+            } else if (targetTab === 'services') {
+                loadServices();
+            } else if (targetTab === 'stylists') {
+                loadStylists();
+            }
         });
-    }
+    });
 }
 
-function updateStats(appointments) {
-    const today = new Date().toDateString();
-    const todayAppointments = appointments.filter(apt => 
-        new Date(apt.appointment_date).toDateString() === today
-    );
+// Initialize based on current page
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing application...');
     
-    const pendingAppointments = appointments.filter(apt => 
-        apt.status === 'pending'
-    );
-    
-    // Card dashboard ids
-    const todayCount = document.getElementById('todayCount');
-    const pendingCount = document.getElementById('pendingCount');
-    const totalCount = document.getElementById('totalCount');
-    if (todayCount) todayCount.textContent = todayAppointments.length;
-    if (pendingCount) pendingCount.textContent = pendingAppointments.length;
-    if (totalCount) totalCount.textContent = appointments.length;
-
-    // Business.html ids
-    const todaysAppointmentsCount = document.getElementById('todaysAppointmentsCount');
-    const pendingAppointmentsCount = document.getElementById('pendingAppointmentsCount');
-    const appointmentBadge = document.getElementById('appointmentBadge');
-    if (todaysAppointmentsCount) todaysAppointmentsCount.textContent = todayAppointments.length;
-    if (pendingAppointmentsCount) pendingAppointmentsCount.textContent = pendingAppointments.length;
-    if (appointmentBadge) appointmentBadge.textContent = pendingAppointments.length;
-}
-
-async function updateAppointmentStatus(appointmentId, status) {
-    try {
-        const response = await fetch('/api/appointments', {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ id: appointmentId, status })
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok) {
-            loadAppointments();
-        } else {
-            alert('Error: ' + result.error);
-        }
-    } catch (error) {
-        alert('Error updating appointment: ' + error.message);
+    // Check which page we're on and initialize accordingly
+    if (window.location.pathname.includes('business.html')) {
+        console.log('Initializing business dashboard...');
+        initBusinessDashboard();
+    } else if (window.location.pathname.includes('customer.html')) {
+        console.log('Initializing customer authentication...');
+        initCustomerAuthentication();
+        handleBusinessLoginRedirect();
+    } else {
+        console.log('Initializing business registration...');
+        initBusinessRegistration();
+        initBusinessAuthentication();
     }
-}
+});
