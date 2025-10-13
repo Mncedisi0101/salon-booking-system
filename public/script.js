@@ -2178,5 +2178,153 @@ function exportAppointments() {
         link.click();
         document.body.removeChild(link);
     });
+        
+}
 
+function displayAppointments(appointments) {
+    // Card list view (if exists)
+    const appointmentsList = document.getElementById('appointmentsList');
+    if (appointmentsList) {
+        appointmentsList.innerHTML = '';
+        if (appointments.length === 0) {
+            appointmentsList.innerHTML = '<p class="no-appointments">No appointments scheduled</p>';
+        } else {
+            appointments.forEach(appointment => {
+                const appointmentItem = document.createElement('div');
+                appointmentItem.className = 'appointment-item';
+                const appointmentDate = new Date(appointment.appointment_date);
+                const formattedDate = appointmentDate.toLocaleDateString() + ' ' + appointmentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const userObj = appointment.customers || appointment.users;
+                appointmentItem.innerHTML = `
+                    <div class="appointment-info">
+                        <h3>${appointment.service}</h3>
+                        <p>Customer: ${userObj ? userObj.name : 'N/A'}</p>
+                        <p>Date: ${formattedDate}</p>
+                        <p>Phone: ${userObj ? userObj.phone : 'N/A'}</p>
+                        ${appointment.notes ? `<p>Notes: ${appointment.notes}</p>` : ''}
+                    </div>
+                    <div class="appointment-actions">
+                        <span class="status-badge status-${appointment.status}">${appointment.status}</span>
+                        <div>
+                            <button class="btn-secondary" onclick="updateAppointmentStatus('${appointment.id}', 'confirmed')">Confirm</button>
+                            <button class="btn-secondary" onclick="updateAppointmentStatus('${appointment.id}', 'cancelled')">Cancel</button>
+                        </div>
+                    </div>
+                `;
+                appointmentsList.appendChild(appointmentItem);
+            });
+        }
+        return;
+    }
+
+    // Table view (business.html)
+    const tbody = document.getElementById('appointmentsTbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    if (appointments.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No appointments found</td></tr>';
+        return;
+    }
+
+    appointments.forEach(appointment => {
+        const row = document.createElement('tr');
+        const appointmentDate = new Date(appointment.appointment_date);
+        const formattedDate = appointmentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + ' at ' + appointmentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        const userObj = appointment.customers || appointment.users;
+        const customerName = userObj ? userObj.name : 'N/A';
+        const avatarLetter = customerName.charAt(0).toUpperCase();
+        row.innerHTML = `
+            <td>
+                <div class="customer-cell">
+                    <div class="customer-avatar">${avatarLetter}</div>
+                    <div>${customerName}</div>
+                </div>
+            </td>
+            <td>${appointment.service}</td>
+            <td>${appointment.stylist || 'Not assigned'}</td>
+            <td>${formattedDate}</td>
+            <td>${userObj ? userObj.phone : 'N/A'}</td>
+            <td>
+                <span class="status-badge status-${appointment.status}">
+                    ${appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                </span>
+            </td>
+            <td>
+                ${appointment.status === 'pending' ? `<button class="action-btn btn-confirm" data-appointment-id="${appointment.id}">Confirm</button>` : ''}
+                <button class="action-btn btn-cancel" data-appointment-id="${appointment.id}">Cancel</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+
+    // Attach confirm buttons to open the modal if present
+    const confirmationModal = document.getElementById('confirmationModal');
+    const modalCustomer = document.getElementById('modalCustomer');
+    const modalService = document.getElementById('modalService');
+    const modalStylist = document.getElementById('modalStylist');
+    const modalDateTime = document.getElementById('modalDateTime');
+
+    document.querySelectorAll('.btn-confirm[data-appointment-id]').forEach(button => {
+        button.addEventListener('click', function() {
+            const row = this.closest('tr');
+            if (row && confirmationModal) {
+                if (modalCustomer) modalCustomer.textContent = row.querySelector('.customer-cell div:last-child')?.textContent || '';
+                if (modalService) modalService.textContent = row.cells[1]?.textContent || '';
+                if (modalStylist) modalStylist.textContent = row.cells[2]?.textContent || '';
+                if (modalDateTime) modalDateTime.textContent = row.cells[3]?.textContent || '';
+                confirmationModal.dataset.appointmentId = this.getAttribute('data-appointment-id');
+                confirmationModal.style.display = 'flex';
+            }
+        });
+    });
+}
+
+function updateStats(appointments) {
+    const today = new Date().toDateString();
+    const todayAppointments = appointments.filter(apt => 
+        new Date(apt.appointment_date).toDateString() === today
+    );
+    
+    const pendingAppointments = appointments.filter(apt => 
+        apt.status === 'pending'
+    );
+    
+    // Card dashboard ids
+    const todayCount = document.getElementById('todayCount');
+    const pendingCount = document.getElementById('pendingCount');
+    const totalCount = document.getElementById('totalCount');
+    if (todayCount) todayCount.textContent = todayAppointments.length;
+    if (pendingCount) pendingCount.textContent = pendingAppointments.length;
+    if (totalCount) totalCount.textContent = appointments.length;
+
+    // Business.html ids
+    const todaysAppointmentsCount = document.getElementById('todaysAppointmentsCount');
+    const pendingAppointmentsCount = document.getElementById('pendingAppointmentsCount');
+    const appointmentBadge = document.getElementById('appointmentBadge');
+    if (todaysAppointmentsCount) todaysAppointmentsCount.textContent = todayAppointments.length;
+    if (pendingAppointmentsCount) pendingAppointmentsCount.textContent = pendingAppointments.length;
+    if (appointmentBadge) appointmentBadge.textContent = pendingAppointments.length;
+}
+
+async function updateAppointmentStatus(appointmentId, status) {
+    try {
+        const response = await fetch('/api/appointments', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ id: appointmentId, status })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            loadAppointments();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error updating appointment: ' + error.message);
+    }
 }
