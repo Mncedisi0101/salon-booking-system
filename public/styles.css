@@ -507,6 +507,7 @@ input:focus, select:focus, textarea:focus {
     margin-bottom: 15px;
     display: -webkit-box;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -638,7 +639,223 @@ input:focus, select:focus, textarea:focus {
     max-width: 600px;
     width: 95%;
 }
+/* Enhanced Notification Styles */
+.notification-panel {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    width: 350px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    display: none;
+    max-height: 400px;
+    overflow-y: auto;
+}
 
+.notification-panel.active {
+    display: block;
+    animation: slideDown 0.3s ease;
+}
+
+.notification-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 12px 12px 0 0;
+}
+
+.notification-header h3 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.notification-list {
+    padding: 0;
+}
+
+.notification-item {
+    padding: 15px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.notification-item:hover {
+    background-color: #f8f9fa;
+}
+
+.notification-item.unread {
+    background-color: rgba(138, 79, 255, 0.05);
+}
+
+.notification-title {
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: var(--dark);
+}
+
+.notification-message {
+    font-size: 14px;
+    color: var(--gray);
+    margin-bottom: 5px;
+}
+
+.notification-time {
+    font-size: 12px;
+    color: var(--gray);
+    opacity: 0.7;
+}
+
+.no-notifications {
+    padding: 30px 20px;
+    text-align: center;
+    color: var(--gray);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+/* Enhanced Appointments Styles */
+.appointments-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.summary-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    box-shadow: var(--shadow);
+    border-left: 4px solid transparent;
+}
+
+.summary-card.pending { border-left-color: var(--warning-color); }
+.summary-card.confirmed { border-left-color: var(--success-color); }
+.summary-card.total { border-left-color: var(--primary-color); }
+
+.summary-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    margin-right: 15px;
+    color: white;
+}
+
+.summary-icon.pending { background: var(--warning-color); }
+.summary-icon.confirmed { background: var(--success-color); }
+.summary-icon.total { background: var(--primary-color); }
+
+.summary-info h3 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.summary-info p {
+    color: var(--text-light);
+    font-size: 14px;
+}
+
+.table-container {
+    overflow-x: auto;
+    margin-bottom: 20px;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.pagination-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background: var(--primary-color);
+    color: white;
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.customer-name {
+    font-weight: 600;
+}
+
+.customer-email {
+    font-size: 12px;
+    color: var(--text-light);
+}
+
+.service-price {
+    font-size: 12px;
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.datetime-info .time-ago {
+    font-size: 12px;
+    color: var(--text-light);
+}
+
+.contact-info .phone {
+    font-weight: 600;
+}
+
+.contact-info .email {
+    font-size: 12px;
+    color: var(--text-light);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 5px;
+}
+
+.action-buttons .action-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+}
+
+.btn-edit {
+    background: var(--warning-color);
+    color: white;
+}
+
+.btn-edit:hover {
+    background: #e68900;
+}
 @media (max-width: 768px) {
     .container {
         padding: 10px;

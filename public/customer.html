@@ -58,7 +58,10 @@
                             <label for="registerPhone">Phone</label>
                             <input type="tel" id="registerPhone" name="phone" required>
                         </div>
-                        
+                        <div class="form-group">
+                            <label for="registerCountry">Country</label>
+                            <input type="text" id="registerCountry" name="country" required>
+                        </div>
                         <div class="form-group">
                             <label for="registerPassword">Password</label>
                             <input type="password" id="registerPassword" name="password" required minlength="6">
@@ -68,7 +71,13 @@
                             <label for="confirmPassword">Confirm Password</label>
                             <input type="password" id="confirmPassword" name="confirmPassword" required>
                         </div>
-                        
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="registerAgreement" name="agreement" required>
+                                <span class="checkmark"></span>
+                                I agree to the collection and processing of my personal information for booking purposes
+                            </label>
+                        </div>
                         <button type="submit" class="btn-primary">Create Account</button>
                     </form>
                 </div>

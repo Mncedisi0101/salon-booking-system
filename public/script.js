@@ -1,3 +1,5 @@
+const appointments = require("../api/appointments");
+
 // Global variables
 let currentBusinessId = null;
 let currentUserId = null;
@@ -5,6 +7,9 @@ let currentUserType = null;
 let currentBusinessData = null;
 let businessServices = [];
 let userType = null; // 'customer' or 'business'
+let notifications = JSON.parse(localStorage.getItem('businessNotifications') || '[]');
+let currentPage = 1;
+const appointmentsPerPage = 10;
 
 // Business Registration Functions
 function initBusinessRegistration() {
@@ -603,6 +608,196 @@ async function handleCustomerRegistration() {
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
     }
+}
+// Function for appointment booking form
+function initNotificationSystem() {
+    const notificationBtn = document.getElementById('notificationBtn');
+    const notificationPanel = document.getElementById('notificationPanel');
+    const clearNotificationsBtn = document.getElementById('clearNotifications');
+    
+    if (notificationBtn && notificationPanel) {
+        notificationBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            notificationPanel.classList.toggle('active');
+            markAllNotificationsAsRead();
+            updateNotificationBadge();
+        });
+        
+        // Close notification panel when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!notificationPanel.contains(e.target) && !notificationBtn.contains(e.target)) {
+                notificationPanel.classList.remove('active');
+            }
+        });
+    }
+    
+    if (clearNotificationsBtn) {
+        clearNotificationsBtn.addEventListener('click', clearAllNotifications);
+    }
+    
+    updateNotificationDisplay();
+}
+function addNotification(title, message, type = 'info') {
+    const notification = {
+        id: Date.now().toString(),
+        title,
+        message,
+        type,
+        timestamp: new Date().toISOString(),
+        read: false
+    };
+    
+    notifications.unshift(notification);
+    if (notifications.length > 50) {
+        notifications = notifications.slice(0, 50);
+    }
+    
+    localStorage.setItem('businessNotifications', JSON.stringify(notifications));
+    updateNotificationDisplay();
+    updateNotificationBadge();
+    
+    // Show desktop notification if supported
+    if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(title, { body: message, icon: '/favicon.ico' });
+    }
+}
+function updateNotificationDisplay() {
+    const notificationList = document.getElementById('notificationList');
+    if (!notificationList) return;
+    
+    if (notifications.length === 0) {
+        notificationList.innerHTML = `
+            <div class="no-notifications">
+                <i class="fas fa-bell-slash" style="font-size: 24px; margin-bottom: 10px;"></i>
+                <p>No new notifications</p>
+            </div>
+        `;
+        return;
+    }
+    
+    notificationList.innerHTML = notifications.map(notification => `
+        <div class="notification-item ${notification.read ? '' : 'unread'}" 
+             onclick="handleNotificationClick('${notification.id}')">
+            <div class="notification-title">${notification.title}</div>
+            <div class="notification-message">${notification.message}</div>
+            <div class="notification-time">${formatTimeAgo(notification.timestamp)}</div>
+        </div>
+    `).join('');
+}
+function handleNotificationClick(notificationId) {
+    const notification = notifications.find(n => n.id === notificationId);
+    if (notification) {
+        notification.read = true;
+        localStorage.setItem('businessNotifications', JSON.stringify(notifications));
+        updateNotificationDisplay();
+        updateNotificationBadge();
+        
+        // Handle notification action
+        if (notification.type === 'new_booking') {
+            document.getElementById('notificationPanel').classList.remove('active');
+            // Scroll to appointments section
+            document.getElementById('appointmentsSection').scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+}
+function markAllNotificationsAsRead() {
+    notifications.forEach(notification => {
+        notification.read = true;
+    });
+    localStorage.setItem('businessNotifications', JSON.stringify(notifications));
+    updateNotificationDisplay();
+    updateNotificationBadge();
+}
+
+function clearAllNotifications() {
+    if (confirm('Are you sure you want to clear all notifications?')) {
+        notifications = [];
+        localStorage.setItem('businessNotifications', JSON.stringify(notifications));
+        updateNotificationDisplay();
+        updateNotificationBadge();
+    }
+}
+function updateNotificationBadge() {
+    const badge = document.getElementById('headerNotificationBadge');
+    if (!badge) return;
+    
+    const unreadCount = notifications.filter(n => !n.read).length;
+    badge.textContent = unreadCount > 99 ? '99+' : unreadCount.toString();
+    badge.style.display = unreadCount > 0 ? 'flex' : 'none';
+}
+
+function formatTimeAgo(timestamp) {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffInSeconds = Math.floor((now - time) / 1000);
+    
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return `${Math.floor(diffInSeconds / 86400)}d ago`;
+}
+// Enhanced Appointments Management
+function initEnhancedAppointments() {
+    // Date range filter
+    const dateRange = document.getElementById('dateRange');
+    const customDateRange = document.getElementById('customDateRange');
+    const customDateRangeEnd = document.getElementById('customDateRangeEnd');
+    
+    if (dateRange) {
+        dateRange.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customDateRange.style.display = 'flex';
+                customDateRangeEnd.style.display = 'flex';
+            } else {
+                customDateRange.style.display = 'none';
+                customDateRangeEnd.style.display = 'none';
+                loadAppointments();
+            }
+        });
+    }
+    
+    // Custom date range listeners
+    const startDate = document.getElementById('startDate');
+    const endDate = document.getElementById('endDate');
+    if (startDate && endDate) {
+        startDate.addEventListener('change', loadAppointments);
+        endDate.addEventListener('change', loadAppointments);
+    }
+    
+    // Export functionality
+    const exportBtn = document.getElementById('exportBtn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', exportAppointments);
+    }
+    
+    // Pagination
+    const prevPage = document.getElementById('prevPage');
+    const nextPage = document.getElementById('nextPage');
+    if (prevPage && nextPage) {
+        prevPage.addEventListener('click', () => changePage(-1));
+        nextPage.addEventListener('click', () => changePage(1));
+    }
+    
+    // Select all functionality
+    const selectAll = document.getElementById('selectAll');
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('#appointmentsTbody input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+    }
+    
+    // Request notification permission
+    if ("Notification" in window) {
+        Notification.requestPermission();
+    }
+}
+function changePage(direction) {
+    currentPage += direction;
+    if (currentPage < 1) currentPage = 1;
+    loadAppointments();
 }
 function showBookingForm(user) {
     document.getElementById('authSection').classList.add('hidden');
@@ -1500,6 +1695,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('dashboardTitle')) {
         console.log('Initializing business dashboard');
         initBusinessDashboard();
+        initNotificationSystem();
+        initEnhancedAppointments();
         
         // Check if business user is logged in
         const businessUser = localStorage.getItem('businessUser');
@@ -1692,175 +1889,294 @@ async function loadBusinessData() {
 
 async function loadAppointments() {
     try {
-        let url = `/api/appointments?businessId=${currentBusinessId}`;
+        // Get filter values
+        const dateRange = document.getElementById('dateRange')?.value || 'today';
+        const startDate = document.getElementById('startDate')?.value;
+        const endDate = document.getElementById('endDate')?.value;
+        const stylistFilter = document.getElementById('stylistFilter')?.value || 'all';
+        const statusFilter = document.getElementById('statusFilter')?.value || 'all';
+        
+        let url = `/api/appointments?businessId=${currentBusinessId}&page=${currentPage}&limit=${appointmentsPerPage}`;
+        
+        // Add filters to URL
         const params = new URLSearchParams();
-        const dateFilter = document.getElementById('datePicker');
-        const stylistFilter = document.getElementById('stylistFilter');
-        const statusFilter = document.getElementById('statusFilter');
-        if (dateFilter && dateFilter.value) params.append('date', dateFilter.value);
-        if (stylistFilter && stylistFilter.value && stylistFilter.value !== 'all') params.append('stylist', stylistFilter.value);
-        if (statusFilter && statusFilter.value && statusFilter.value !== 'all') params.append('status', statusFilter.value);
-        const qs = params.toString();
-        if (qs) url += `&${qs}`;
-
+        
+        // Date range filter
+        if (dateRange === 'custom' && startDate && endDate) {
+            params.append('startDate', startDate);
+            params.append('endDate', endDate);
+        } else if (dateRange !== 'custom') {
+            params.append('dateRange', dateRange);
+        }
+        
+        if (stylistFilter !== 'all') params.append('stylist', stylistFilter);
+        if (statusFilter !== 'all') params.append('status', statusFilter);
+        
+        if (params.toString()) {
+            url += '&' + params.toString();
+        }
+        
         const response = await fetch(url);
         const result = await response.json();
         
         if (response.ok) {
-            displayAppointments(result.appointments || []);
-            updateStats(result.appointments || []);
+            displayEnhancedAppointments(result.appointments || []);
+            updateAppointmentSummary(result.appointments || []);
+            updatePagination(result.totalCount || result.appointments.length);
         } else {
-            alert('Error: ' + result.error);
+            console.error('Error loading appointments:', result.error);
         }
     } catch (error) {
-        alert('Error loading appointments: ' + error.message);
+        console.error('Error loading appointments:', error);
     }
 }
-
-function displayAppointments(appointments) {
-    // Card list view (if exists)
-    const appointmentsList = document.getElementById('appointmentsList');
-    if (appointmentsList) {
-        appointmentsList.innerHTML = '';
-        if (appointments.length === 0) {
-            appointmentsList.innerHTML = '<p class="no-appointments">No appointments scheduled</p>';
-        } else {
-            appointments.forEach(appointment => {
-                const appointmentItem = document.createElement('div');
-                appointmentItem.className = 'appointment-item';
-                const appointmentDate = new Date(appointment.appointment_date);
-                const formattedDate = appointmentDate.toLocaleDateString() + ' ' + appointmentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const userObj = appointment.customers || appointment.users;
-                appointmentItem.innerHTML = `
-                    <div class="appointment-info">
-                        <h3>${appointment.service}</h3>
-                        <p>Customer: ${userObj ? userObj.name : 'N/A'}</p>
-                        <p>Date: ${formattedDate}</p>
-                        <p>Phone: ${userObj ? userObj.phone : 'N/A'}</p>
-                        ${appointment.notes ? `<p>Notes: ${appointment.notes}</p>` : ''}
-                    </div>
-                    <div class="appointment-actions">
-                        <span class="status-badge status-${appointment.status}">${appointment.status}</span>
-                        <div>
-                            <button class="btn-secondary" onclick="updateAppointmentStatus('${appointment.id}', 'confirmed')">Confirm</button>
-                            <button class="btn-secondary" onclick="updateAppointmentStatus('${appointment.id}', 'cancelled')">Cancel</button>
-                        </div>
-                    </div>
-                `;
-                appointmentsList.appendChild(appointmentItem);
-            });
-        }
-        return;
-    }
-
-    // Table view (business.html)
+function displayEnhancedAppointments(appointments) {
     const tbody = document.getElementById('appointmentsTbody');
     if (!tbody) return;
-
+    
     tbody.innerHTML = '';
+    
     if (appointments.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No appointments found</td></tr>';
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 40px;">
+                    <i class="fas fa-calendar-times" style="font-size: 48px; color: var(--gray); margin-bottom: 15px;"></i>
+                    <p>No appointments found</p>
+                    <p style="font-size: 14px; color: var(--gray);">Try adjusting your filters</p>
+                </td>
+            </tr>
+        `;
         return;
     }
-
+    
     appointments.forEach(appointment => {
         const row = document.createElement('tr');
         const appointmentDate = new Date(appointment.appointment_date);
-        const formattedDate = appointmentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + ' at ' + appointmentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-        const userObj = appointment.customers || appointment.users;
-        const customerName = userObj ? userObj.name : 'N/A';
+        const formattedDate = appointmentDate.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        }) + ' at ' + appointmentDate.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        
+        const customerName = appointment.customers ? appointment.customers.name : 'N/A';
         const avatarLetter = customerName.charAt(0).toUpperCase();
+        
         row.innerHTML = `
+            <td>
+                <input type="checkbox" class="appointment-checkbox" value="${appointment.id}">
+            </td>
             <td>
                 <div class="customer-cell">
                     <div class="customer-avatar">${avatarLetter}</div>
-                    <div>${customerName}</div>
+                    <div>
+                        <div class="customer-name">${customerName}</div>
+                        <div class="customer-email">${appointment.customers ? appointment.customers.email : 'N/A'}</div>
+                    </div>
                 </div>
             </td>
-            <td>${appointment.service}</td>
+            <td>
+                <div class="service-info">
+                    <div class="service-name">${appointment.service}</div>
+                    ${appointment.services ? `<div class="service-price">R${appointment.services.price}</div>` : ''}
+                </div>
+            </td>
             <td>${appointment.stylist || 'Not assigned'}</td>
-            <td>${formattedDate}</td>
-            <td>${userObj ? userObj.phone : 'N/A'}</td>
+            <td>
+                <div class="datetime-info">
+                    <div class="date">${formattedDate}</div>
+                    <div class="time-ago">${formatTimeAgo(appointment.appointment_date)}</div>
+                </div>
+            </td>
+            <td>
+                <div class="contact-info">
+                    <div class="phone">${appointment.customers ? appointment.customers.phone : 'N/A'}</div>
+                    <div class="email">${appointment.customers ? appointment.customers.email : 'N/A'}</div>
+                </div>
+            </td>
             <td>
                 <span class="status-badge status-${appointment.status}">
                     ${appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
                 </span>
             </td>
             <td>
-                ${appointment.status === 'pending' ? `<button class="action-btn btn-confirm" data-appointment-id="${appointment.id}">Confirm</button>` : ''}
-                <button class="action-btn btn-cancel" data-appointment-id="${appointment.id}">Cancel</button>
+                <div class="action-buttons">
+                    ${appointment.status === 'pending' ? 
+                        `<button class="action-btn btn-confirm" data-appointment-id="${appointment.id}">
+                            <i class="fas fa-check"></i> Confirm
+                        </button>` : ''}
+                    <button class="action-btn btn-edit" data-appointment-id="${appointment.id}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="action-btn btn-cancel" data-appointment-id="${appointment.id}">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
             </td>
         `;
+        
         tbody.appendChild(row);
     });
+    
+    // Attach event listeners
+    attachAppointmentEventListeners();
+}
+function updateAppointmentSummary(appointments) {
+    const pendingCount = appointments.filter(apt => apt.status === 'pending').length;
+    const confirmedCount = appointments.filter(apt => apt.status === 'confirmed').length;
+    const totalCount = appointments.length;
+    
+    document.getElementById('pendingCount').textContent = pendingCount;
+    document.getElementById('confirmedCount').textContent = confirmedCount;
+    document.getElementById('totalCount').textContent = totalCount;
+}
 
-    // Attach confirm buttons to open the modal if present
-    const confirmationModal = document.getElementById('confirmationModal');
-    const modalCustomer = document.getElementById('modalCustomer');
-    const modalService = document.getElementById('modalService');
-    const modalStylist = document.getElementById('modalStylist');
-    const modalDateTime = document.getElementById('modalDateTime');
-
-    document.querySelectorAll('.btn-confirm[data-appointment-id]').forEach(button => {
+function updatePagination(totalCount) {
+    const totalPages = Math.ceil(totalCount / appointmentsPerPage);
+    const pageInfo = document.getElementById('pageInfo');
+    const prevPage = document.getElementById('prevPage');
+    const nextPage = document.getElementById('nextPage');
+    
+    if (pageInfo) {
+        pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+    }
+    
+    if (prevPage) {
+        prevPage.disabled = currentPage === 1;
+    }
+    
+    if (nextPage) {
+        nextPage.disabled = currentPage === totalPages;
+    }
+}
+function attachAppointmentEventListeners() {
+    // Confirm buttons
+    document.querySelectorAll('.btn-confirm').forEach(button => {
         button.addEventListener('click', function() {
-            const row = this.closest('tr');
-            if (row && confirmationModal) {
-                if (modalCustomer) modalCustomer.textContent = row.querySelector('.customer-cell div:last-child')?.textContent || '';
-                if (modalService) modalService.textContent = row.cells[1]?.textContent || '';
-                if (modalStylist) modalStylist.textContent = row.cells[2]?.textContent || '';
-                if (modalDateTime) modalDateTime.textContent = row.cells[3]?.textContent || '';
-                confirmationModal.dataset.appointmentId = this.getAttribute('data-appointment-id');
-                confirmationModal.style.display = 'flex';
-            }
+            const appointmentId = this.getAttribute('data-appointment-id');
+            confirmAppointment(appointmentId);
+        });
+    });
+    
+    // Edit buttons
+    document.querySelectorAll('.btn-edit').forEach(button => {
+        button.addEventListener('click', function() {
+            const appointmentId = this.getAttribute('data-appointment-id');
+            editAppointment(appointmentId);
+        });
+    });
+    
+    // Cancel buttons
+    document.querySelectorAll('.btn-cancel').forEach(button => {
+        button.addEventListener('click', function() {
+            const appointmentId = this.getAttribute('data-appointment-id');
+            cancelAppointment(appointmentId);
         });
     });
 }
-
-function updateStats(appointments) {
-    const today = new Date().toDateString();
-    const todayAppointments = appointments.filter(apt => 
-        new Date(apt.appointment_date).toDateString() === today
-    );
-    
-    const pendingAppointments = appointments.filter(apt => 
-        apt.status === 'pending'
-    );
-    
-    // Card dashboard ids
-    const todayCount = document.getElementById('todayCount');
-    const pendingCount = document.getElementById('pendingCount');
-    const totalCount = document.getElementById('totalCount');
-    if (todayCount) todayCount.textContent = todayAppointments.length;
-    if (pendingCount) pendingCount.textContent = pendingAppointments.length;
-    if (totalCount) totalCount.textContent = appointments.length;
-
-    // Business.html ids
-    const todaysAppointmentsCount = document.getElementById('todaysAppointmentsCount');
-    const pendingAppointmentsCount = document.getElementById('pendingAppointmentsCount');
-    const appointmentBadge = document.getElementById('appointmentBadge');
-    if (todaysAppointmentsCount) todaysAppointmentsCount.textContent = todayAppointments.length;
-    if (pendingAppointmentsCount) pendingAppointmentsCount.textContent = pendingAppointments.length;
-    if (appointmentBadge) appointmentBadge.textContent = pendingAppointments.length;
-}
-
-async function updateAppointmentStatus(appointmentId, status) {
+async function confirmAppointment(appointmentId) {
     try {
         const response = await fetch('/api/appointments', {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ id: appointmentId, status })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: appointmentId, status: 'confirmed' })
         });
-        
-        const result = await response.json();
         
         if (response.ok) {
             loadAppointments();
+            addNotification('Appointment Confirmed', 'Appointment has been confirmed successfully', 'success');
         } else {
-            alert('Error: ' + result.error);
+            alert('Error confirming appointment');
         }
     } catch (error) {
-        alert('Error updating appointment: ' + error.message);
+        console.error('Error confirming appointment:', error);
+        alert('Error confirming appointment');
     }
+}
+async function cancelAppointment(appointmentId) {
+    if (!confirm('Are you sure you want to cancel this appointment?')) return;
+    
+    try {
+        const response = await fetch('/api/appointments', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: appointmentId, status: 'cancelled' })
+        });
+        
+        if (response.ok) {
+            loadAppointments();
+            addNotification('Appointment Cancelled', 'Appointment has been cancelled', 'warning');
+        } else {
+            alert('Error cancelling appointment');
+        }
+    } catch (error) {
+        console.error('Error cancelling appointment:', error);
+        alert('Error cancelling appointment');
+    }
+}
+function editAppointment(appointmentId) {
+    // Implement edit functionality
+   loadAppointments().then(() => {
+        const appointment = appointments.find(apt => apt.id === appointmentId);
+
+        if (appointment) {
+            // Populate the booking form with appointment details
+            document.getElementById('editAppointmentId').value = appointment.id;
+            document.getElementById('editCustomerName').value = appointment.customers.name;
+            document.getElementById('editService').value = appointment.service;
+            document.getElementById('editStylist').value = appointment.stylist;
+            document.getElementById('editAppointmentDate').value = appointment.appointment_date;
+            document.getElementById('editAppointmentNotes').value = appointment.notes;
+
+            // Show the edit modal
+            document.getElementById('editAppointmentModal').style.display = 'block';
+       } else {
+         alert('Appointment not found');
+         }
+    });
+}
+
+function exportAppointments() {
+    // Implement export functionality
+   loadAppointments().then(() => {
+        if (appointments.length === 0) {
+            alert('No appointments to export');
+            return;
+        }
+
+        const headers = ['Customer Name', 'Service', 'Stylist', 'Appointment Date', 'Phone', 'Email', 'Status', 'Notes'];
+        const rows = appointments.map(apt => {
+            const appointmentDate = new Date(apt.appointment_date);
+            const formattedDate = appointmentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + ' at ' + appointmentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            const customerName = apt.customers ? apt.customers.name : 'N/A';
+            const phone = apt.customers ? apt.customers.phone : 'N/A';
+            const email = apt.customers ? apt.customers.email : 'N/A';
+            return [
+                customerName,
+                apt.service,
+                apt.stylist || 'Not assigned',
+                formattedDate,
+                phone,
+                email,
+                apt.status.charAt(0).toUpperCase() + apt.status.slice(1),
+                apt.notes || ''
+            ];
+        });
+
+        let csvContent = "data:text/csv;charset=utf-8," 
+            + headers.join(",") + "\n"
+            + rows.map(e => e.map(field => `"${field.replace(/"/g, '""')}"`).join(",")).join("\n");
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "appointments.csv");
+        document.body.appendChild(link); // Required for FF
+
+        link.click();
+        document.body.removeChild(link);
+    });
+
 }
