@@ -2115,6 +2115,7 @@ function initBusinessDashboard() {
     
     // Initialize dashboard sections
     initMenuTabNavigation(); // Initialize sidebar menu navigation
+    initDashboardTabs();
     initServiceManagement();
     initStylistManagement();
     initQRCodeModal();
@@ -2160,6 +2161,39 @@ function updateBusinessInfo(business) {
     if (businessEmailElement) businessEmailElement.textContent = business.email;
     if (businessPhoneElement) businessPhoneElement.textContent = business.phone;
     if (businessAddressElement) businessAddressElement.textContent = business.address;
+}
+
+// Tab navigation
+function initDashboardTabs() {
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const targetTab = this.getAttribute('data-tab');
+            
+            // Update active tab button
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Show target tab content
+            tabContents.forEach(content => {
+                content.classList.add('hidden');
+                if (content.id === targetTab) {
+                    content.classList.remove('hidden');
+                }
+            });
+            
+            // Load data for the tab if needed
+            if (targetTab === 'appointments') {
+                loadAppointments();
+            } else if (targetTab === 'services') {
+                loadServices();
+            } else if (targetTab === 'stylists') {
+                loadStylists();
+            }
+        });
+    });
 }
 // Initialize based on current page
 document.addEventListener('DOMContentLoaded', function() {
