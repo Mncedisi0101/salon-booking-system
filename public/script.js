@@ -1784,16 +1784,10 @@ function updateSalonName() {
 }
 
 // Function to initialize menu tab navigation
+// Function to initialize menu tab navigation
 function initMenuTabNavigation() {
     const menuItems = document.querySelectorAll('.sidebar-menu li');
-    const sections = {
-        'dashboard': document.getElementById('dashboard'),
-        'appointments': document.getElementById('appointmentsSection'),
-        'services': document.getElementById('servicesSection'),
-        'stylists': document.getElementById('stylistsSection'),
-        'qrcode': null // QR code will be handled separately
-    };
-
+    
     menuItems.forEach(item => {
         item.addEventListener('click', function() {
             const tab = this.getAttribute('data-tab');
@@ -1809,47 +1803,213 @@ function initMenuTabNavigation() {
                 return;
             }
             
-            // Hide all sections
-            Object.values(sections).forEach(section => {
-                if (section) {
-                    section.style.display = 'none';
-                }
-            });
+            // Hide all dashboard sections first
+            hideAllDashboardSections();
             
             // Show the selected section
-            if (sections[tab]) {
-                sections[tab].style.display = 'block';
-                
-                // Update dashboard title
-                updateDashboardTitle(tab);
-                
-                // Load data for the section if needed
-                if (tab === 'appointments') {
-                    loadAppointments();
-                } else if (tab === 'services') {
-                    loadServices();
-                } else if (tab === 'stylists') {
-                    loadStylists();
-                }
-            }
+            showDashboardSection(tab);
+            
+            // Update dashboard title
+            updateDashboardTitle(tab);
+            
+            // Load data for the section if needed
+            loadSectionData(tab);
         });
     });
+}
+// Function to hide all dashboard sections
+function hideAllDashboardSections() {
+    const sections = [
+        document.getElementById('dashboard'),
+        document.getElementById('appointmentsSection'),
+        document.getElementById('servicesSection'),
+        document.getElementById('stylistsSection')
+    ];
+    
+    sections.forEach(section => {
+        if (section) {
+            section.style.display = 'none';
+        }
+    });
+}
+// Function to show specific dashboard section
+function showDashboardSection(tab) {
+    let sectionToShow = null;
+    
+    switch(tab) {
+        case 'dashboard':
+            sectionToShow = document.getElementById('dashboard');
+            break;
+        case 'appointments':
+            sectionToShow = document.getElementById('appointmentsSection');
+            break;
+        case 'services':
+            sectionToShow = document.getElementById('servicesSection');
+            break;
+        case 'stylists':
+            sectionToShow = document.getElementById('stylistsSection');
+            break;
+    }
+    
+    if (sectionToShow) {
+        sectionToShow.style.display = 'block';
+    }
+}
+// Function to load data for specific section
+function loadSectionData(tab) {
+    switch(tab) {
+        case 'dashboard':
+            // Load dashboard stats and data
+            loadDashboardData();
+            break;
+        case 'appointments':
+            loadAppointments();
+            break;
+        case 'services':
+            loadServices();
+            break;
+        case 'stylists':
+            loadStylists();
+            break;
+    }
+}
+// Function to load dashboard data
+async function loadDashboardData() {
+    try {
+        // Load today's appointments count
+        const todayResponse = await fetch(`/api/appointments?businessId=${currentBusinessId}&dateRange=today`);
+        if (todayResponse.ok) {
+            const todayData = await todayResponse.json();
+            const todayCount = document.getElementById('todaysAppointmentsCount');
+            if (todayCount) {
+                todayCount.textContent = todayData.appointments ? todayData.appointments.length : 0;
+            }
+        }
+        
+        // Load pending appointments count
+        const pendingResponse = await fetch(`/api/appointments?businessId=${currentBusinessId}&status=pending`);
+        if (pendingResponse.ok) {
+            const pendingData = await pendingResponse.json();
+            const pendingCount = document.getElementById('pendingAppointmentsCount');
+            const appointmentBadge = document.getElementById('appointmentBadge');
+            
+            const pendingAppointments = pendingData.appointments ? pendingData.appointments.length : 0;
+            
+            if (pendingCount) {
+                pendingCount.textContent = pendingAppointments;
+            }
+            if (appointmentBadge) {
+                appointmentBadge.textContent = pendingAppointments;
+                appointmentBadge.style.display = pendingAppointments > 0 ? 'flex' : 'none';
+            }
+        }
+        
+        // Load daily schedule
+        loadDailySchedule();
+        
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+    }
+}
+// Function to load daily schedule
+async function loadDailySchedule() {
+    try {
+        const scheduleSlots = document.getElementById('scheduleSlots');
+        if (!scheduleSlots) return;
+
+        // Get today's appointments for the schedule
+        const today = new Date().toISOString().split('T')[0];
+        const response = await fetch(`/api/appointments?businessId=${currentBusinessId}&dateRange=today`);
+        
+        if (response.ok) {
+            const result = await response.json();
+            const appointments = result.appointments || [];
+            
+            // Generate time slots for the day (9 AM to 6 PM)
+            const timeSlots = generateTimeSlots();
+            
+            scheduleSlots.innerHTML = '';
+            
+            timeSlots.forEach(slot => {
+                const slotElement = document.createElement('div');
+                slotElement.className = 'time-slot available';
+                
+                // Check if this time slot is booked
+                const isBooked = appointments.some(apt => {
+                    const aptTime = new Date(apt.appointment_date);
+                    const aptHour = aptTime.getHours();
+                    const aptMinute = aptTime.getMinutes();
+                    return aptHour === slot.hour && aptMinute === slot.minute;
+                });
+                
+                if (isBooked) {
+                    slotElement.classList.add('booked');
+                    slotElement.classList.remove('available');
+                }
+                
+                slotElement.innerHTML = `
+                    <div class="time">${slot.displayTime}</div>
+                    <div class="slot-info">${isBooked ? 'Booked' : 'Available'}</div>
+                `;
+                
+                scheduleSlots.appendChild(slotElement);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading daily schedule:', error);
+    }
+}
+// Helper function to generate time slots
+function generateTimeSlots() {
+    const slots = [];
+    const startHour = 9; // 9 AM
+    const endHour = 18; // 6 PM
+    
+    for (let hour = startHour; hour < endHour; hour++) {
+        for (let minute = 0; minute < 60; minute += 30) { // 30-minute intervals
+            const time = new Date();
+            time.setHours(hour, minute, 0, 0);
+            
+            slots.push({
+                hour: hour,
+                minute: minute,
+                displayTime: time.toLocaleTimeString('en-US', { 
+                    hour: 'numeric', 
+                    minute: '2-digit',
+                    hour12: true 
+                })
+            });
+        }
+    }
+    
+    return slots;
 }
 
 // Function to update dashboard title based on active tab
 function updateDashboardTitle(tab) {
     const titleElement = document.getElementById('dashboardTitle');
+    const subtitleElement = document.querySelector('.page-title p');
+    
     if (!titleElement) return;
 
     const titles = {
         'dashboard': 'Salon Dashboard',
         'appointments': 'Appointments Management',
         'services': 'Services Management',
-        'stylists': 'Stylists Management',
-        'qrcode': 'QR Code'
+        'stylists': 'Stylists Management'
+    };
+
+    const subtitles = {
+        'dashboard': 'Manage your salon appointments and stylists',
+        'appointments': 'View and manage all appointments',
+        'services': 'Manage your salon services and pricing',
+        'stylists': 'Manage your stylists and their availability'
     };
 
     titleElement.textContent = titles[tab] || 'Salon Dashboard';
+    if (subtitleElement) {
+        subtitleElement.textContent = subtitles[tab] || 'Manage your salon appointments and stylists';
+    }
 }
 
 // QR Code Modal Functions
@@ -2075,7 +2235,7 @@ function initBusinessDashboard() {
     
     console.log('Business ID from URL:', currentBusinessId);
     
-    // FIXED: Check if business ID exists and is valid
+    // Check if business ID exists and is valid
     if (!currentBusinessId) {
         console.error('No business ID found in URL');
         showNotification('Invalid business URL. Please use the correct dashboard link.', 'error');
@@ -2091,7 +2251,6 @@ function initBusinessDashboard() {
     
     if (!businessUser || userType !== 'business') {
         console.log('No business user found, redirecting to login...');
-        // Redirect to customer page for business login
         window.location.href = 'customer.html?type=business';
         return;
     }
@@ -2111,24 +2270,28 @@ function initBusinessDashboard() {
     
     // Update business info in dashboard
     updateBusinessInfo(businessUser);
-    updateSalonName(); // Update salon name in sidebar
+    updateSalonName();
     
     // Initialize dashboard sections
-    initMenuTabNavigation(); // Initialize sidebar menu navigation
-    initDashboardTabs();
+    initMenuTabNavigation();
     initServiceManagement();
     initStylistManagement();
     initQRCodeModal();
     
-    // FIXED: Load appointments with proper error handling
+    // Set initial state - show dashboard by default
+    hideAllDashboardSections();
+    showDashboardSection('dashboard');
+    updateDashboardTitle('dashboard');
+    
+    // Load initial data
     try {
-        loadAppointments();
+        loadDashboardData();
+        loadAppointments(); // Pre-load appointments data
     } catch (error) {
-        console.error('Error loading appointments:', error);
-        showNotification('Error loading appointments', 'error');
+        console.error('Error loading initial data:', error);
+        showNotification('Error loading dashboard data', 'error');
     }
     
-    // FIXED: Initialize notification polling
     initNotificationPolling();
     
     // Set up logout functionality

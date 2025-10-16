@@ -969,6 +969,28 @@
 #appointmentsSection {
     display: block;
 }
+/* Section display control */
+.dashboard-section {
+    display: none;
+}
+
+#dashboard {
+    display: block; /* Dashboard should be visible by default */
+}
+
+#appointmentsSection,
+#servicesSection,
+#stylistsSection {
+    display: none; /* Other sections hidden by default */
+}
+
+/* Ensure proper spacing for sections */
+.appointments-section,
+.services-management-container,
+.stylists-management-container,
+.daily-schedule {
+    margin-bottom: 30px;
+}
         /* Responsive Styles */
         @media (max-width: 1100px) {
             .sidebar {
