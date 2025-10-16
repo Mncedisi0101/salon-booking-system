@@ -1784,13 +1784,14 @@ function updateSalonName() {
 }
 
 // Function to initialize menu tab navigation
-// Function to initialize menu tab navigation
 function initMenuTabNavigation() {
     const menuItems = document.querySelectorAll('.sidebar-menu li');
+    console.log('Found menu items:', menuItems.length);
     
     menuItems.forEach(item => {
         item.addEventListener('click', function() {
             const tab = this.getAttribute('data-tab');
+            console.log('Menu tab clicked:', tab);
             
             // Remove active class from all menu items
             menuItems.forEach(menuItem => menuItem.classList.remove('active'));
@@ -1799,6 +1800,7 @@ function initMenuTabNavigation() {
             
             // Handle QR code tab separately
             if (tab === 'qrcode') {
+                console.log('Opening QR code modal');
                 showQRCodeModal();
                 return;
             }
@@ -1820,13 +1822,14 @@ function initMenuTabNavigation() {
 // Function to hide all dashboard sections
 function hideAllDashboardSections() {
     const sections = [
-        document.getElementById('dashboard'),
-        document.getElementById('appointmentsSection'),
-        document.getElementById('servicesSection'),
-        document.getElementById('stylistsSection')
+        'dashboard',
+        'appointmentsSection', 
+        'servicesSection',
+        'stylistsSection'
     ];
     
-    sections.forEach(section => {
+    sections.forEach(sectionId => {
+        const section = document.getElementById(sectionId);
         if (section) {
             section.style.display = 'none';
         }
@@ -1834,29 +1837,39 @@ function hideAllDashboardSections() {
 }
 // Function to show specific dashboard section
 function showDashboardSection(tab) {
-    let sectionToShow = null;
+    console.log('Showing section for tab:', tab);
+    
+    let sectionId = '';
     
     switch(tab) {
         case 'dashboard':
-            sectionToShow = document.getElementById('dashboard');
+            sectionId = 'dashboard';
             break;
         case 'appointments':
-            sectionToShow = document.getElementById('appointmentsSection');
+            sectionId = 'appointmentsSection';
             break;
         case 'services':
-            sectionToShow = document.getElementById('servicesSection');
+            sectionId = 'servicesSection';
             break;
         case 'stylists':
-            sectionToShow = document.getElementById('stylistsSection');
+            sectionId = 'stylistsSection';
             break;
+        default:
+            sectionId = 'dashboard';
     }
     
+    const sectionToShow = document.getElementById(sectionId);
     if (sectionToShow) {
+        console.log('Found section to show:', sectionId);
         sectionToShow.style.display = 'block';
+    } else {
+        console.error('Section not found:', sectionId);
     }
 }
 // Function to load data for specific section
 function loadSectionData(tab) {
+    console.log('Loading data for section:', tab);
+    
     switch(tab) {
         case 'dashboard':
             // Load dashboard stats and data
@@ -2277,16 +2290,44 @@ function initBusinessDashboard() {
     initServiceManagement();
     initStylistManagement();
     initQRCodeModal();
+    debugSectionVisibility();
     
     // Set initial state - show dashboard by default
-    hideAllDashboardSections();
-    showDashboardSection('dashboard');
+    // First hide all sections except dashboard
+    const sectionsToHide = ['appointmentsSection', 'servicesSection', 'stylistsSection'];
+    sectionsToHide.forEach(sectionId => {
+        const section = document.getElementById(sectionId);
+        if (section) {
+            section.style.display = 'none';
+        }
+    });
+    
+    // Ensure dashboard is visible
+    const dashboardSection = document.getElementById('dashboard');
+    if (dashboardSection) {
+        dashboardSection.style.display = 'block';
+    }
+    
+    // Set active menu item
+    const menuItems = document.querySelectorAll('.sidebar-menu li');
+    menuItems.forEach(item => {
+        item.classList.remove('active');
+        if (item.getAttribute('data-tab') === 'dashboard') {
+            item.classList.add('active');
+        }
+    });
+    
     updateDashboardTitle('dashboard');
     
     // Load initial data
     try {
         loadDashboardData();
-        loadAppointments(); // Pre-load appointments data
+        // Pre-load other data in background for faster switching
+        setTimeout(() => {
+            loadAppointments();
+            loadServices();
+            loadStylists();
+        }, 1000);
     } catch (error) {
         console.error('Error loading initial data:', error);
         showNotification('Error loading dashboard data', 'error');
@@ -2305,15 +2346,38 @@ function initBusinessDashboard() {
         });
     }
     
-    // Show dashboard
-    const dashboardElement = document.getElementById('dashboard');
-    if (dashboardElement) {
-        dashboardElement.classList.remove('hidden');
-    } else {
-        console.error('Dashboard element not found!');
-    }
+    // Debug: Log section states
+    console.log('Section states after initialization:');
+    console.log('- Dashboard:', document.getElementById('dashboard')?.style.display);
+    console.log('- Appointments:', document.getElementById('appointmentsSection')?.style.display);
+    console.log('- Services:', document.getElementById('servicesSection')?.style.display);
+    console.log('- Stylists:', document.getElementById('stylistsSection')?.style.display);
 }
-
+// Debug function to check section visibility
+function debugSectionVisibility() {
+    console.log('=== SECTION VISIBILITY DEBUG ===');
+    const sections = [
+        { id: 'dashboard', name: 'Dashboard' },
+        { id: 'appointmentsSection', name: 'Appointments' },
+        { id: 'servicesSection', name: 'Services' },
+        { id: 'stylistsSection', name: 'Stylists' }
+    ];
+    
+    sections.forEach(section => {
+        const element = document.getElementById(section.id);
+        if (element) {
+            console.log(`${section.name}:`, {
+                exists: true,
+                display: element.style.display,
+                computedDisplay: window.getComputedStyle(element).display,
+                hidden: element.classList.contains('hidden')
+            });
+        } else {
+            console.log(`${section.name}: ELEMENT NOT FOUND`);
+        }
+    });
+    console.log('=== END DEBUG ===');
+}
 function updateBusinessInfo(business) {
     const businessNameElement = document.getElementById('businessNameDisplay');
     const businessEmailElement = document.getElementById('businessEmailDisplay');
