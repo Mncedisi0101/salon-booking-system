@@ -957,26 +957,20 @@
 }
 
 /* Section display control */
-/* .dashboard-section {
+.dashboard-section {
     display: none;
-} */
-
-/* .dashboard-section.active {
-    display: block;
-} */
-
-/* Ensure appointments section is visible by default */
-#appointmentsSection {
-    display: block;
-}
-#dashboard {
-    display: block; /* Dashboard should be visible by default */
 }
 
-#appointmentsSection,
-#servicesSection,
-#stylistsSection {
-    display: none; /* Other sections hidden by default */
+.dashboard-section.active {
+    display: block;
+}
+
+/* Ensure proper spacing for sections */
+.appointments-section,
+.services-management-container,
+.stylists-management-container,
+.daily-schedule {
+    margin-bottom: 30px;
 }
 
 /* Ensure proper spacing for sections */
@@ -1216,30 +1210,43 @@
         </div>
 
         <div class="dashboard-content" id="dashboard">
-            <!-- Stats Cards -->
-            <div class="stats-cards">
-                <div class="stat-card">
-                    <div class="stat-icon calendar">
-                        <i class="fas fa-calendar-check"></i>
+            <div class="dashboard-section active" id="dashboardSection">
+                 <!-- Stats Cards -->
+                <div class="stats-cards">
+                    <div class="stat-card">
+                        <div class="stat-icon calendar">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="todaysAppointmentsCount">0</h3>
+                            <p>Today's Appointments</p>
+                        </div>
                     </div>
-                    <div class="stat-info">
-                        <h3 id="todaysAppointmentsCount">0</h3>
-                        <p>Today's Appointments</p>
+                    <div class="stat-card">
+                        <div class="stat-icon clock">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="pendingAppointmentsCount">0</h3>
+                            <p>Pending Confirmations</p>
+                        </div>
                     </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon clock">
-                        <i class="fas fa-clock"></i>
+
+                        <!-- Daily Schedule -->
+                <div class="daily-schedule">
+                    <div class="section-header">
+                        <h2>Daily Schedule</h2>
                     </div>
-                    <div class="stat-info">
-                        <h3 id="pendingAppointmentsCount">0</h3>
-                        <p>Pending Confirmations</p>
+                    <div class="schedule-slots" id="scheduleSlots">
+                        <!-- Schedule slots will be loaded here -->
                     </div>
+
                 </div>
             </div>
-
+         
             <!-- Services Management -->
-            <div class="services-management-container" id="servicesSection">
+            <div class="dashboard-section" id="servicesSection">
                 <div class="section-header">
                     <h2>Manage Services</h2>
                     <button id="addServiceBtn" class="btn-primary">Add New Service</button>
@@ -1250,7 +1257,7 @@
             </div>
 
             <!-- Stylists Management Section -->
-            <div class="stylists-management-container" id="stylistsSection">
+            <div class="dashboard-section" id="stylistsSection">
                 <div class="section-header">
                     <h2>Manage Stylists</h2>
                     <button id="addStylistBtn" class="btn-primary">Add New Stylist</button>
@@ -1261,8 +1268,8 @@
             </div>
 
                        <!-- Appointments Section -->
-            <div class="appointments-section" id="appointmentsSection">
-                <div class="section-header">
+                 <div class="dashboard-section" id="appointmentsSection">
+                    <div class="section-header">
                     <h2>All Appointments</h2>
                     <div class="filters">
                         <div class="filter-group">
@@ -1364,18 +1371,9 @@
                     </button>
                 </div>
             </div>
-
-            <!-- Daily Schedule -->
-            <div class="daily-schedule">
-                <div class="section-header">
-                    <h2>Daily Schedule</h2>
-                </div>
-                <div class="schedule-slots" id="scheduleSlots">
-                    <!-- Schedule slots will be loaded here -->
-                </div>
-            </div>
         </div>
     </div>
+    
 
     <!-- Confirmation Modal -->
     <div class="modal" id="confirmationModal">

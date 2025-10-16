@@ -1793,17 +1793,17 @@ function initMenuTabNavigation() {
             const tab = this.getAttribute('data-tab');
             console.log('Menu tab clicked:', tab);
             
-            // Remove active class from all menu items
-            menuItems.forEach(menuItem => menuItem.classList.remove('active'));
-            // Add active class to clicked menu item
-            this.classList.add('active');
-            
             // Handle QR code tab separately
             if (tab === 'qrcode') {
                 console.log('Opening QR code modal');
                 showQRCodeModal();
                 return;
             }
+            
+            // Remove active class from all menu items
+            menuItems.forEach(menuItem => menuItem.classList.remove('active'));
+            // Add active class to clicked menu item
+            this.classList.add('active');
             
             // Hide all dashboard sections first
             hideAllDashboardSections();
@@ -1821,18 +1821,9 @@ function initMenuTabNavigation() {
 }
 // Function to hide all dashboard sections
 function hideAllDashboardSections() {
-    const sections = [
-        'dashboard',
-        'appointmentsSection', 
-        'servicesSection',
-        'stylistsSection'
-    ];
-    
-    sections.forEach(sectionId => {
-        const section = document.getElementById(sectionId);
-        if (section) {
-            section.style.display = 'none';
-        }
+    const sections = document.querySelectorAll('.dashboard-section');
+    sections.forEach(section => {
+        section.classList.remove('active');
     });
 }
 // Function to show specific dashboard section
@@ -1843,7 +1834,7 @@ function showDashboardSection(tab) {
     
     switch(tab) {
         case 'dashboard':
-            sectionId = 'dashboard';
+            sectionId = 'dashboardSection';
             break;
         case 'appointments':
             sectionId = 'appointmentsSection';
@@ -1855,13 +1846,13 @@ function showDashboardSection(tab) {
             sectionId = 'stylistsSection';
             break;
         default:
-            sectionId = 'dashboard';
+            sectionId = 'dashboardSection';
     }
     
     const sectionToShow = document.getElementById(sectionId);
     if (sectionToShow) {
         console.log('Found section to show:', sectionId);
-        sectionToShow.style.display = 'block';
+        sectionToShow.classList.add('active');
     } else {
         console.error('Section not found:', sectionId);
     }
@@ -2290,23 +2281,10 @@ function initBusinessDashboard() {
     initServiceManagement();
     initStylistManagement();
     initQRCodeModal();
-    debugSectionVisibility();
     
     // Set initial state - show dashboard by default
-    // First hide all sections except dashboard
-    const sectionsToHide = ['appointmentsSection', 'servicesSection', 'stylistsSection'];
-    sectionsToHide.forEach(sectionId => {
-        const section = document.getElementById(sectionId);
-        if (section) {
-            section.style.display = 'none';
-        }
-    });
-    
-    // Ensure dashboard is visible
-    const dashboardSection = document.getElementById('dashboard');
-    if (dashboardSection) {
-        dashboardSection.style.display = 'block';
-    }
+    hideAllDashboardSections();
+    showDashboardSection('dashboard');
     
     // Set active menu item
     const menuItems = document.querySelectorAll('.sidebar-menu li');
@@ -2345,13 +2323,6 @@ function initBusinessDashboard() {
             window.location.href = 'customer.html';
         });
     }
-    
-    // Debug: Log section states
-    console.log('Section states after initialization:');
-    console.log('- Dashboard:', document.getElementById('dashboard')?.style.display);
-    console.log('- Appointments:', document.getElementById('appointmentsSection')?.style.display);
-    console.log('- Services:', document.getElementById('servicesSection')?.style.display);
-    console.log('- Stylists:', document.getElementById('stylistsSection')?.style.display);
 }
 // Debug function to check section visibility
 function debugSectionVisibility() {
