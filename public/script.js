@@ -1775,8 +1775,296 @@ async function handleAppointmentBooking(appointmentData) {
         throw error;
     }
 }
+// Function to update salon name in sidebar
+function updateSalonName() {
+    const salonNameElement = document.getElementById('sidebarSalonName');
+    if (salonNameElement && currentBusinessData) {
+        salonNameElement.textContent = currentBusinessData.name || 'Luxe Beauty Lounge';
+    }
+}
 
-// BUSINESS DASHBOARD INITIALIZATION - FIXED VERSION
+// Function to initialize menu tab navigation
+function initMenuTabNavigation() {
+    const menuItems = document.querySelectorAll('.sidebar-menu li');
+    const sections = {
+        'dashboard': document.getElementById('dashboard'),
+        'appointments': document.getElementById('appointmentsSection'),
+        'services': document.getElementById('servicesSection'),
+        'stylists': document.getElementById('stylistsSection'),
+        'qrcode': null // QR code will be handled separately
+    };
+
+    menuItems.forEach(item => {
+        item.addEventListener('click', function() {
+            const tab = this.getAttribute('data-tab');
+            
+            // Remove active class from all menu items
+            menuItems.forEach(menuItem => menuItem.classList.remove('active'));
+            // Add active class to clicked menu item
+            this.classList.add('active');
+            
+            // Handle QR code tab separately
+            if (tab === 'qrcode') {
+                showQRCodeModal();
+                return;
+            }
+            
+            // Hide all sections
+            Object.values(sections).forEach(section => {
+                if (section) {
+                    section.style.display = 'none';
+                }
+            });
+            
+            // Show the selected section
+            if (sections[tab]) {
+                sections[tab].style.display = 'block';
+                
+                // Update dashboard title
+                updateDashboardTitle(tab);
+                
+                // Load data for the section if needed
+                if (tab === 'appointments') {
+                    loadAppointments();
+                } else if (tab === 'services') {
+                    loadServices();
+                } else if (tab === 'stylists') {
+                    loadStylists();
+                }
+            }
+        });
+    });
+}
+
+// Function to update dashboard title based on active tab
+function updateDashboardTitle(tab) {
+    const titleElement = document.getElementById('dashboardTitle');
+    if (!titleElement) return;
+
+    const titles = {
+        'dashboard': 'Salon Dashboard',
+        'appointments': 'Appointments Management',
+        'services': 'Services Management',
+        'stylists': 'Stylists Management',
+        'qrcode': 'QR Code'
+    };
+
+    titleElement.textContent = titles[tab] || 'Salon Dashboard';
+}
+
+// QR Code Modal Functions
+function initQRCodeModal() {
+    const qrModal = document.getElementById('qrModal');
+    const closeModalBtn = qrModal?.querySelector('.close-modal');
+    const downloadQrBtn = document.getElementById('downloadQrBtn');
+    const printQrBtn = document.getElementById('printQrBtn');
+
+    // Close modal when close button is clicked
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', function() {
+            closeQRCodeModal();
+        });
+    }
+
+    // Close modal when clicking outside
+    if (qrModal) {
+        qrModal.addEventListener('click', function(e) {
+            if (e.target === qrModal) {
+                closeQRCodeModal();
+            }
+        });
+    }
+
+    // Download QR code
+    if (downloadQrBtn) {
+        downloadQrBtn.addEventListener('click', function() {
+            downloadQRCode();
+        });
+    }
+
+    // Print QR code
+    if (printQrBtn) {
+        printQrBtn.addEventListener('click', function() {
+            printQRCode();
+        });
+    }
+}
+
+function showQRCodeModal() {
+    const modal = document.getElementById('qrModal');
+    if (!modal) return;
+
+    // Generate or retrieve QR code
+    generateOrRetrieveQRCode();
+    
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+}
+
+function closeQRCodeModal() {
+    const modal = document.getElementById('qrModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
+}
+
+async function generateOrRetrieveQRCode() {
+    const qrCodeContainer = document.getElementById('modalQrCode');
+    if (!qrCodeContainer) return;
+
+    try {
+        // Check if we already have a QR code in localStorage
+        const storedQRCode = localStorage.getItem(`businessQRCode_${currentBusinessId}`);
+        
+        if (storedQRCode) {
+            displayQRCode(storedQRCode);
+            return;
+        }
+
+        // Generate new QR code
+        const qrResponse = await fetch('/api/qrcode', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ businessId: currentBusinessId })
+        });
+
+        if (!qrResponse.ok) {
+            throw new Error('Failed to generate QR code');
+        }
+
+        const qrResult = await qrResponse.json();
+        
+        if (qrResult.qrCode) {
+            // Store QR code in localStorage for future use
+            localStorage.setItem(`businessQRCode_${currentBusinessId}`, qrResult.qrCode);
+            displayQRCode(qrResult.qrCode);
+        } else {
+            // Fallback: Create QR code using a service or generate URL
+            createFallbackQRCode();
+        }
+
+    } catch (error) {
+        console.error('Error generating QR code:', error);
+        createFallbackQRCode();
+    }
+}
+
+function displayQRCode(qrCodeData) {
+    const qrCodeContainer = document.getElementById('modalQrCode');
+    if (!qrCodeContainer) return;
+
+    qrCodeContainer.innerHTML = `
+        <div style="text-align: center;">
+            <img src="${qrCodeData}" alt="Business QR Code" style="max-width: 300px; height: auto; border: 1px solid #e0e0e0; border-radius: 8px;">
+            <p style="margin-top: 15px; color: var(--gray); font-size: 14px;">
+                Scan this QR code to book appointments
+            </p>
+        </div>
+    `;
+}
+
+function createFallbackQRCode() {
+    const qrCodeContainer = document.getElementById('modalQrCode');
+    if (!qrCodeContainer) return;
+
+    const bookingUrl = `${window.location.protocol}//${window.location.host}/customer.html?business=${currentBusinessId}`;
+    
+    qrCodeContainer.innerHTML = `
+        <div style="text-align: center; padding: 20px;">
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 15px;">
+                <i class="fas fa-qrcode" style="font-size: 48px; color: var(--primary); margin-bottom: 15px;"></i>
+                <p style="color: var(--danger); margin-bottom: 15px;">
+                    QR code generation unavailable. Use the URL below:
+                </p>
+                <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid var(--border-color);">
+                    <strong style="word-break: break-all; font-size: 14px;">${bookingUrl}</strong>
+                </div>
+            </div>
+            <p style="color: var(--gray); font-size: 12px;">
+                You can use any QR code generator with this URL to create your booking QR code.
+            </p>
+        </div>
+    `;
+}
+
+function downloadQRCode() {
+    const qrImage = document.querySelector('#modalQrCode img');
+    if (qrImage && qrImage.src) {
+        const link = document.createElement('a');
+        link.download = `salon-booking-qr-${currentBusinessId}.png`;
+        link.href = qrImage.src;
+        link.click();
+    } else {
+        // Fallback: Create a downloadable version of the URL
+        const bookingUrl = `${window.location.protocol}//${window.location.host}/customer.html?business=${currentBusinessId}`;
+        const blob = new Blob([bookingUrl], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = `salon-booking-url-${currentBusinessId}.txt`;
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+        
+        showNotification('QR code image not available. Downloaded booking URL instead.', 'info');
+    }
+}
+
+function printQRCode() {
+    const qrContent = document.getElementById('modalQrCode').innerHTML;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Salon Booking QR Code</title>
+            <style>
+                body { 
+                    font-family: Arial, sans-serif; 
+                    text-align: center; 
+                    padding: 40px;
+                    background: white;
+                }
+                .qr-container { 
+                    margin: 20px auto; 
+                    max-width: 300px;
+                }
+                .business-info {
+                    margin-bottom: 20px;
+                    color: #333;
+                }
+                .instructions {
+                    margin-top: 20px;
+                    color: #666;
+                    font-size: 14px;
+                }
+                @media print {
+                    body { margin: 0; padding: 20px; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="business-info">
+                <h2>${currentBusinessData?.name || 'Salon'} Booking</h2>
+                <p>Scan to book an appointment</p>
+            </div>
+            <div class="qr-container">${qrContent}</div>
+            <div class="instructions">
+                <p>Scan this QR code with your phone's camera to book an appointment</p>
+            </div>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 500);
+}
 // BUSINESS DASHBOARD INITIALIZATION - FIXED VERSION
 function initBusinessDashboard() {
     console.log('Initializing business dashboard...');
@@ -1823,11 +2111,13 @@ function initBusinessDashboard() {
     
     // Update business info in dashboard
     updateBusinessInfo(businessUser);
+    updateSalonName(); // Update salon name in sidebar
     
     // Initialize dashboard sections
-    initDashboardTabs();
+    initMenuTabNavigation(); // Initialize sidebar menu navigation
     initServiceManagement();
     initStylistManagement();
+    initQRCodeModal();
     
     // FIXED: Load appointments with proper error handling
     try {
@@ -1870,39 +2160,6 @@ function updateBusinessInfo(business) {
     if (businessEmailElement) businessEmailElement.textContent = business.email;
     if (businessPhoneElement) businessPhoneElement.textContent = business.phone;
     if (businessAddressElement) businessAddressElement.textContent = business.address;
-}
-
-// Tab navigation
-function initDashboardTabs() {
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
-    
-    tabButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const targetTab = this.getAttribute('data-tab');
-            
-            // Update active tab button
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            this.classList.add('active');
-            
-            // Show target tab content
-            tabContents.forEach(content => {
-                content.classList.add('hidden');
-                if (content.id === targetTab) {
-                    content.classList.remove('hidden');
-                }
-            });
-            
-            // Load data for the tab if needed
-            if (targetTab === 'appointments') {
-                loadAppointments();
-            } else if (targetTab === 'services') {
-                loadServices();
-            } else if (targetTab === 'stylists') {
-                loadStylists();
-            }
-        });
-    });
 }
 // Initialize based on current page
 document.addEventListener('DOMContentLoaded', function() {

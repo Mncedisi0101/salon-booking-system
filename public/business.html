@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Salon Booking System</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="styles.css">
     <style>
         :root {
             --primary: #8a4fff;
@@ -928,7 +927,46 @@
         .hidden {
             display: none !important;
         }
+        /* QR Code Modal Styles */
+#qrModal .modal-content {
+    max-width: 500px;
+    width: 95%;
+}
 
+#modalQrCode {
+    text-align: center;
+    padding: 20px;
+}
+
+#modalQrCode img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 20px;
+    background: #f9f9f9;
+    border-top: 1px solid #e0e0e0;
+}
+
+/* Section display control */
+.dashboard-section {
+    display: none;
+}
+
+.dashboard-section.active {
+    display: block;
+}
+
+/* Ensure appointments section is visible by default */
+#appointmentsSection {
+    display: block;
+}
         /* Responsive Styles */
         @media (max-width: 1100px) {
             .sidebar {
