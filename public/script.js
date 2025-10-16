@@ -1344,6 +1344,181 @@ async function deleteStylist(stylistId) {
         showNotification('Error deleting stylist: ' + error.message, 'error');
     }
 }
+// APPOINTMENT MANAGEMENT FUNCTIONS
+// Initialize appointment filters
+function initAppointmentFilters() {
+    const statusFilter = document.getElementById('statusFilter');
+    const dateRange = document.getElementById('dateRange');
+    const exportBtn = document.getElementById('exportBtn');
+    
+    // Status filter change
+    if (statusFilter) {
+        statusFilter.addEventListener('change', function() {
+            currentPage = 1; // Reset to first page when filter changes
+            loadAppointments();
+        });
+    }
+    
+    // Date range filter change
+    if (dateRange) {
+        dateRange.addEventListener('change', function() {
+            currentPage = 1;
+            loadAppointments();
+        });
+    }
+    
+    // Export button
+    if (exportBtn) {
+        exportBtn.addEventListener('click', exportAppointments);
+    }
+}
+// Confirm appointment function
+async function confirmAppointment(appointmentId) {
+    if (!confirm('Are you sure you want to confirm this appointment?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/appointments', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id: appointmentId,
+                status: 'confirmed'
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            // Send confirmation notification to customer
+            await sendAppointmentNotification(appointmentId, 'confirmed');
+            
+            showNotification('Appointment confirmed successfully!', 'success');
+            await loadAppointments(); // Reload the appointments list
+            
+        } else {
+            throw new Error(result.error || 'Failed to confirm appointment');
+        }
+
+    } catch (error) {
+        console.error('Error confirming appointment:', error);
+        showNotification('Error confirming appointment: ' + error.message, 'error');
+    }
+}
+
+// Cancel appointment function
+async function cancelAppointment(appointmentId) {
+    if (!confirm('Are you sure you want to cancel this appointment?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/appointments', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id: appointmentId,
+                status: 'cancelled'
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            // Send cancellation notification to customer
+            await sendAppointmentNotification(appointmentId, 'cancelled');
+            
+            showNotification('Appointment cancelled successfully!', 'success');
+            await loadAppointments(); // Reload the appointments list
+            
+        } else {
+            throw new Error(result.error || 'Failed to cancel appointment');
+        }
+
+    } catch (error) {
+        console.error('Error cancelling appointment:', error);
+        showNotification('Error cancelling appointment: ' + error.message, 'error');
+    }
+}
+// Send appointment notification (email/SMS)
+async function sendAppointmentNotification(appointmentId, action) {
+    try {
+        const response = await fetch('/api/notifications', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                appointmentId: appointmentId,
+                action: action,
+                businessId: currentBusinessId
+            })
+        });
+
+        if (response.ok) {
+            console.log(`Notification sent for ${action} appointment`);
+        } else {
+            console.warn('Failed to send notification, but appointment status was updated');
+        }
+    } catch (error) {
+        console.warn('Notification service unavailable, but appointment status was updated');
+    }
+}
+// Export appointments function
+async function exportAppointments() {
+    try {
+        // Get current filter values
+        const dateRange = document.getElementById('dateRange')?.value || 'today';
+        const startDate = document.getElementById('startDate')?.value;
+        const endDate = document.getElementById('endDate')?.value;
+        const stylistFilter = document.getElementById('stylistFilter')?.value || 'all';
+        const statusFilter = document.getElementById('statusFilter')?.value || 'all';
+        
+        let url = `/api/appointments/export?businessId=${currentBusinessId}`;
+        
+        // Add filters to URL
+        const params = new URLSearchParams();
+        if (dateRange && dateRange !== 'custom') params.append('dateRange', dateRange);
+        if (startDate && endDate && dateRange === 'custom') {
+            params.append('startDate', startDate);
+            params.append('endDate', endDate);
+        }
+        if (stylistFilter !== 'all') params.append('stylist', stylistFilter);
+        if (statusFilter !== 'all') params.append('status', statusFilter);
+        
+        if (params.toString()) {
+            url += '&' + params.toString();
+        }
+        
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error('Failed to export appointments');
+        }
+        
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = `appointments-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(downloadUrl);
+        
+        showNotification('Appointments exported successfully!', 'success');
+        
+    } catch (error) {
+        console.error('Error exporting appointments:', error);
+        showNotification('Error exporting appointments: ' + error.message, 'error');
+    }
+}
+// Display appointments in the table
 function displayAppointments(appointments) {
     const tbody = document.getElementById('appointmentsTbody');
     if (!tbody) {
@@ -1383,11 +1558,17 @@ function displayAppointments(appointments) {
         const stylistData = appointment.stylists || {};
         const stylistName = stylistData.name || appointment.stylist_name || 'Not assigned';
         
+        // Determine status badge class
+        const statusClass = `status-${appointment.status}`;
+        
         row.innerHTML = `
             <td>
                 <div class="customer-cell">
                     <div class="customer-avatar">${avatarLetter}</div>
-                    <div>${customerName}</div>
+                    <div>
+                        <div>${customerName}</div>
+                        <small style="color: var(--gray);">${customerEmail}</small>
+                    </div>
                 </div>
             </td>
             <td>${serviceName}</td>
@@ -1395,20 +1576,92 @@ function displayAppointments(appointments) {
             <td>${formattedDate}</td>
             <td>${customerPhone}</td>
             <td>
-                <span class="status-badge status-${appointment.status}">
+                <span class="status-badge ${statusClass}">
                     ${appointment.status ? appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1) : 'Pending'}
                 </span>
             </td>
             <td>
-                ${appointment.status === 'pending' ? 
-                    `<button class="action-btn btn-confirm" onclick="confirmAppointment('${appointment.id}')">Confirm</button>` : ''}
-                <button class="action-btn btn-cancel" onclick="cancelAppointment('${appointment.id}')">Cancel</button>
+                <div class="action-buttons">
+                    ${appointment.status === 'pending' ? 
+                        `<button class="action-btn btn-confirm" onclick="confirmAppointment('${appointment.id}')">
+                            <i class="fas fa-check"></i> Confirm
+                        </button>` : ''}
+                    ${appointment.status === 'confirmed' ? 
+                        `<button class="action-btn btn-complete" onclick="completeAppointment('${appointment.id}')">
+                            <i class="fas fa-check-double"></i> Complete
+                        </button>` : ''}
+                    ${appointment.status !== 'cancelled' && appointment.status !== 'completed' ? 
+                        `<button class="action-btn btn-cancel" onclick="cancelAppointment('${appointment.id}')">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>` : ''}
+                    ${appointment.status === 'cancelled' || appointment.status === 'completed' ? 
+                        `<button class="action-btn btn-delete" onclick="deleteAppointment('${appointment.id}')">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>` : ''}
+                </div>
             </td>
         `;
         tbody.appendChild(row);
     });
 }
-// APPOINTMENT MANAGEMENT FUNCTIONS - FIXED VERSION
+// Complete appointment function
+async function completeAppointment(appointmentId) {
+    if (!confirm('Mark this appointment as completed?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/appointments', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id: appointmentId,
+                status: 'completed'
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showNotification('Appointment marked as completed!', 'success');
+            await loadAppointments();
+        } else {
+            throw new Error(result.error || 'Failed to complete appointment');
+        }
+
+    } catch (error) {
+        console.error('Error completing appointment:', error);
+        showNotification('Error completing appointment: ' + error.message, 'error');
+    }
+}
+// Delete appointment function
+async function deleteAppointment(appointmentId) {
+    if (!confirm('Are you sure you want to delete this appointment? This action cannot be undone.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/appointments?id=${appointmentId}`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showNotification('Appointment deleted successfully!', 'success');
+            await loadAppointments();
+        } else {
+            throw new Error(result.error || 'Failed to delete appointment');
+        }
+
+    } catch (error) {
+        console.error('Error deleting appointment:', error);
+        showNotification('Error deleting appointment: ' + error.message, 'error');
+    }
+}
+// Load appointments with filters and pagination
 async function loadAppointments() {
     try {
         console.log('Loading appointments for business:', currentBusinessId);
@@ -1502,34 +1755,75 @@ function updateStats(appointments) {
     if (confirmedSummary) confirmedSummary.textContent = confirmedAppointments.length;
     if (totalSummary) totalSummary.textContent = appointments.length;
 }
-function updatePaginationControls(totalPages) {
+// Initialize pagination
+function initPagination() {
+    console.log('Initializing pagination...');
+    updatePaginationEventListeners();
+}
+// Update pagination event listeners
+function updatePaginationEventListeners() {
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
+
+    if (!prevBtn || !nextBtn) return;
+
+    // Remove existing event listeners by cloning
+    const newPrevBtn = prevBtn.cloneNode(true);
+    const newNextBtn = nextBtn.cloneNode(true);
+    
+    if (prevBtn.parentNode) {
+        prevBtn.parentNode.replaceChild(newPrevBtn, prevBtn);
+    }
+    if (nextBtn.parentNode) {
+        nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
+    }
+
+    // Add new event listeners to the new buttons
+    document.getElementById('prevPage')?.addEventListener('click', function() {
+        if (!this.disabled) {
+            changePage(-1);
+        }
+    });
+
+    document.getElementById('nextPage')?.addEventListener('click', function() {
+        if (!this.disabled) {
+            changePage(1);
+        }
+    });
+}
+// Update pagination controls
+function updatePaginationControls(totalCount) {
     const prevBtn = document.getElementById('prevPage');
     const nextBtn = document.getElementById('nextPage');
     const pageInfo = document.getElementById('pageInfo');
 
-    if (prevBtn) {
-        prevBtn.disabled = currentPage <= 1;
-        prevBtn.style.opacity = currentPage <= 1 ? '0.5' : '1';
-    }
+    if (!prevBtn || !nextBtn || !pageInfo) return;
 
-    if (nextBtn) {
-        nextBtn.disabled = currentPage >= totalPages;
-        nextBtn.style.opacity = currentPage >= totalPages ? '0.5' : '1';
-    }
+    const totalPages = Math.ceil(totalCount / appointmentsPerPage) || 1;
 
-    if (pageInfo) {
-        pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
-    }
+    // Update previous button
+    prevBtn.disabled = currentPage <= 1;
+    prevBtn.style.opacity = currentPage <= 1 ? '0.5' : '1';
+    prevBtn.style.cursor = currentPage <= 1 ? 'not-allowed' : 'pointer';
+
+    // Update next button
+    nextBtn.disabled = currentPage >= totalPages;
+    nextBtn.style.opacity = currentPage >= totalPages ? '0.5' : '1';
+    nextBtn.style.cursor = currentPage >= totalPages ? 'not-allowed' : 'pointer';
+
+    // Update page info
+    pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
 }
-
+// Change page function
 function changePage(direction) {
     const newPage = currentPage + direction;
     if (newPage < 1) return;
     
     currentPage = newPage;
+    console.log(`Changing to page ${currentPage}`);
     loadAppointments();
 }
-
+// Format appointment date
 function formatAppointmentDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleString('en-US', {
@@ -2281,6 +2575,8 @@ function initBusinessDashboard() {
     initServiceManagement();
     initStylistManagement();
     initQRCodeModal();
+    initAppointmentFilters(); 
+    initPagination(); 
     
     // Set initial state - show dashboard by default
     hideAllDashboardSections();
