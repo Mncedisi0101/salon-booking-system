@@ -65,24 +65,27 @@ module.exports = async (req, res) => {
 };
 
 async function sendAppointmentEmail(appointment, action) {
-  const customerEmail = appointment.customers?.email;
-  const customerName = appointment.customers?.name || 'Valued Customer';
-  const businessEmail = appointment.businesses?.email;
-  const businessName = appointment.businesses?.name || 'Salon';
-  
-  console.log('Sending email to:', customerEmail, 'from business:', businessName);
-
-  if (!customerEmail) {
-    throw new Error('Customer email not found');
-  }
-
-  if (!businessEmail) {
-    console.warn('Business email not found, using fallback');
-  }
-
-  const emailTemplate = generateEmailTemplate(appointment, action);
-  
   try {
+    const customerEmail = appointment.customers?.email;
+    const customerName = appointment.customers?.name || 'Valued Customer';
+    const businessEmail = appointment.businesses?.email;
+    const businessName = appointment.businesses?.name || 'Salon';
+    
+    console.log('Sending email to:', customerEmail, 'from business:', businessName);
+
+    if (!customerEmail) {
+      console.warn('Customer email not found, skipping email notification');
+      return { skipped: true, reason: 'No customer email' };
+    }
+
+    // Check if Resend API key is configured
+    if (!process.env.RESEND_API_KEY) {
+      console.warn('RESEND_API_KEY not configured, skipping email notification');
+      return { skipped: true, reason: 'Email service not configured' };
+    }
+
+    const emailTemplate = generateEmailTemplate(appointment, action);
+    
     console.log('Attempting to send email via Resend...');
     
     const { data, error } = await resend.emails.send({
@@ -104,9 +107,11 @@ async function sendAppointmentEmail(appointment, action) {
 
   } catch (error) {
     console.error('Email sending error:', error);
-    throw error;
+    // Don't throw the error, just return it so the main request doesn't fail
+    return { error: error.message, failed: true };
   }
 }
+
 // Generate email content based on action
 function generateEmailTemplate(appointment, action) {
   const customerName = appointment.customers?.name || 'Valued Customer';
@@ -236,7 +241,219 @@ Thank you for choosing ${data.businessName}!
   `;
 }
 
-// Add similar functions for cancelled, reminder, completed emails...
+function generateCancelledEmailHTML(data) {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #ff4757; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 10px 10px; }
+        .appointment-details { background: white; padding: 15px; border-radius: 8px; margin: 15px 0; }
+        .footer { text-align: center; margin-top: 20px; color: #666; font-size: 14px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Appointment Cancelled ❌</h1>
+        </div>
+        <div class="content">
+          <p>Hello <strong>${data.customerName}</strong>,</p>
+          <p>Your appointment has been cancelled as requested.</p>
+          
+          <div class="appointment-details">
+            <h3>Cancelled Appointment Details:</h3>
+            <p><strong>Service:</strong> ${data.serviceName}</p>
+            <p><strong>Date:</strong> ${data.formattedDate}</p>
+            <p><strong>Time:</strong> ${data.formattedTime}</p>
+            <p><strong>Stylist:</strong> ${data.stylistName}</p>
+          </div>
+          
+          <p>We hope to see you again soon!</p>
+          
+          <p><strong>Business Information:</strong></p>
+          <p>${data.businessName}</p>
+          <p>📞 ${data.businessPhone}</p>
+          <p>📍 ${data.businessAddress}</p>
+        </div>
+        <div class="footer">
+          <p>Thank you for considering ${data.businessName}!</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+function generateCancelledEmailText(data) {
+  return `
+Appointment Cancelled ❌
+
+Hello ${data.customerName},
+
+Your appointment has been cancelled as requested.
+
+CANCELLED APPOINTMENT DETAILS:
+Service: ${data.serviceName}
+Date: ${data.formattedDate}
+Time: ${data.formattedTime}
+Stylist: ${data.stylistName}
+
+We hope to see you again soon!
+
+BUSINESS INFORMATION:
+${data.businessName}
+Phone: ${data.businessPhone}
+Address: ${data.businessAddress}
+
+Thank you for considering ${data.businessName}!
+  `;
+}
+
+function generateReminderEmailHTML(data) {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #ffa502; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 10px 10px; }
+        .appointment-details { background: white; padding: 15px; border-radius: 8px; margin: 15px 0; }
+        .footer { text-align: center; margin-top: 20px; color: #666; font-size: 14px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Appointment Reminder ⏰</h1>
+        </div>
+        <div class="content">
+          <p>Hello <strong>${data.customerName}</strong>,</p>
+          <p>This is a friendly reminder about your upcoming appointment.</p>
+          
+          <div class="appointment-details">
+            <h3>Appointment Details:</h3>
+            <p><strong>Service:</strong> ${data.serviceName}</p>
+            <p><strong>Date:</strong> ${data.formattedDate}</p>
+            <p><strong>Time:</strong> ${data.formattedTime}</p>
+            <p><strong>Stylist:</strong> ${data.stylistName}</p>
+          </div>
+          
+          <p><em>Please arrive 5-10 minutes before your appointment time.</em></p>
+          
+          <p><strong>Business Information:</strong></p>
+          <p>${data.businessName}</p>
+          <p>📞 ${data.businessPhone}</p>
+          <p>📍 ${data.businessAddress}</p>
+        </div>
+        <div class="footer">
+          <p>We look forward to seeing you!</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+function generateReminderEmailText(data) {
+  return `
+Appointment Reminder ⏰
+
+Hello ${data.customerName},
+
+This is a friendly reminder about your upcoming appointment.
+
+APPOINTMENT DETAILS:
+Service: ${data.serviceName}
+Date: ${data.formattedDate}
+Time: ${data.formattedTime}
+Stylist: ${data.stylistName}
+
+Please arrive 5-10 minutes before your appointment time.
+
+BUSINESS INFORMATION:
+${data.businessName}
+Phone: ${data.businessPhone}
+Address: ${data.businessAddress}
+
+We look forward to seeing you!
+  `;
+}
+
+function generateCompletedEmailHTML(data) {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #2ed573; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 10px 10px; }
+        .appointment-details { background: white; padding: 15px; border-radius: 8px; margin: 15px 0; }
+        .footer { text-align: center; margin-top: 20px; color: #666; font-size: 14px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Thank You for Your Visit! ✨</h1>
+        </div>
+        <div class="content">
+          <p>Hello <strong>${data.customerName}</strong>,</p>
+          <p>Thank you for visiting us! We hope you enjoyed your experience.</p>
+          
+          <div class="appointment-details">
+            <h3>Service Details:</h3>
+            <p><strong>Service:</strong> ${data.serviceName}</p>
+            <p><strong>Date:</strong> ${data.formattedDate}</p>
+            <p><strong>Stylist:</strong> ${data.stylistName}</p>
+          </div>
+          
+          <p>We appreciate your business and look forward to serving you again!</p>
+          
+          <p><strong>Business Information:</strong></p>
+          <p>${data.businessName}</p>
+          <p>📞 ${data.businessPhone}</p>
+          <p>📍 ${data.businessAddress}</p>
+        </div>
+        <div class="footer">
+          <p>We hope to see you again soon!</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+function generateCompletedEmailText(data) {
+  return `
+Thank You for Your Visit! ✨
+
+Hello ${data.customerName},
+
+Thank you for visiting us! We hope you enjoyed your experience.
+
+SERVICE DETAILS:
+Service: ${data.serviceName}
+Date: ${data.formattedDate}
+Stylist: ${data.stylistName}
+
+We appreciate your business and look forward to serving you again!
+
+BUSINESS INFORMATION:
+${data.businessName}
+Phone: ${data.businessPhone}
+Address: ${data.businessAddress}
+
+We hope to see you again soon!
+  `;
+}
 
 async function createInAppNotification(appointment, action) {
   try {
@@ -257,13 +474,15 @@ async function createInAppNotification(appointment, action) {
 
     if (error) {
       console.error('Failed to create in-app notification:', error);
-      throw error;
+      // Don't throw the error, just log it
+      return { error: error.message, failed: true };
     }
     
     console.log('In-app notification created successfully');
+    return { success: true };
   } catch (error) {
     console.error('Error creating in-app notification:', error);
-    throw error;
+    return { error: error.message, failed: true };
   }
 }
 
