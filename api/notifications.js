@@ -1,7 +1,13 @@
 const supabase = require('../supabase');
 const { Resend } = require('resend');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend only if API key exists
+let resend;
+if (process.env.RESEND_API_KEY) {
+  resend = new Resend(process.env.RESEND_API_KEY);
+} else {
+  console.warn('RESEND_API_KEY not configured - email notifications will be disabled');
+}
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -42,22 +48,24 @@ module.exports = async (req, res) => {
 
       console.log('Appointment found:', appointment.id);
 
-      // Send email using business's email as sender
+      // Send email notification
       const emailResult = await sendAppointmentEmail(appointment, action);
       
       // Create in-app notification
-      await createInAppNotification(appointment, action);
+      const notificationResult = await createInAppNotification(appointment, action);
 
       return res.status(200).json({ 
         success: true, 
-        message: `Notification sent successfully`,
-        emailSent: emailResult,
-        notificationCreated: true
+        message: `Notification processed successfully`,
+        emailSent: emailResult.success || false,
+        emailError: emailResult.error,
+        notificationCreated: notificationResult.success || false,
+        notificationError: notificationResult.error
       });
 
     } catch (error) {
-      console.error('Notification error details:', error);
-      return res.status(500).json({ error: 'Failed to send notification: ' + error.message });
+      console.error('Notification processing error:', error);
+      return res.status(500).json({ error: 'Failed to process notification: ' + error.message });
     }
   }
 
@@ -68,30 +76,29 @@ async function sendAppointmentEmail(appointment, action) {
   try {
     const customerEmail = appointment.customers?.email;
     const customerName = appointment.customers?.name || 'Valued Customer';
-    const businessEmail = appointment.businesses?.email;
     const businessName = appointment.businesses?.name || 'Salon';
     
-    console.log('Sending email to:', customerEmail, 'from business:', businessName);
+    console.log('Attempting to send email to:', customerEmail);
 
+    // Check if customer email exists
     if (!customerEmail) {
       console.warn('Customer email not found, skipping email notification');
-      return { skipped: true, reason: 'No customer email' };
+      return { success: false, error: 'No customer email available', skipped: true };
     }
 
-    // Check if Resend API key is configured
-    if (!process.env.RESEND_API_KEY) {
-      console.warn('RESEND_API_KEY not configured, skipping email notification');
-      return { skipped: true, reason: 'Email service not configured' };
+    // Check if Resend is configured
+    if (!resend) {
+      console.warn('Resend email service not configured, skipping email notification');
+      return { success: false, error: 'Email service not configured', skipped: true };
     }
 
     const emailTemplate = generateEmailTemplate(appointment, action);
     
-    console.log('Attempting to send email via Resend...');
+    console.log('Sending email via Resend...');
     
     const { data, error } = await resend.emails.send({
-      from: `${businessName} <onboarding@resend.dev>`, // Use test domain
+      from: 'Salon Booking <onboarding@resend.dev>', // Use default Resend domain
       to: customerEmail,
-      reply_to: businessEmail || 'noreply@example.com', // Fallback if no business email
       subject: emailTemplate.subject,
       html: emailTemplate.html,
       text: emailTemplate.text,
@@ -99,16 +106,15 @@ async function sendAppointmentEmail(appointment, action) {
 
     if (error) {
       console.error('Resend API error:', error);
-      throw new Error(`Resend API error: ${JSON.stringify(error)}`);
+      return { success: false, error: error.message };
     }
 
-    console.log('Email sent successfully:', data);
-    return data;
+    console.log('Email sent successfully to:', customerEmail);
+    return { success: true, data };
 
   } catch (error) {
     console.error('Email sending error:', error);
-    // Don't throw the error, just return it so the main request doesn't fail
-    return { error: error.message, failed: true };
+    return { success: false, error: error.message };
   }
 }
 
@@ -168,7 +174,7 @@ function generateEmailTemplate(appointment, action) {
   return templates[action] || templates.confirmed;
 }
 
-// Email template generators
+// Email template generators (keep your existing templates)
 function generateConfirmedEmailHTML(data) {
   return `
     <!DOCTYPE html>
@@ -202,8 +208,8 @@ function generateConfirmedEmailHTML(data) {
           
           <p><strong>Business Information:</strong></p>
           <p>${data.businessName}</p>
-          <p>📞 ${data.businessPhone}</p>
-          <p>📍 ${data.businessAddress}</p>
+          ${data.businessPhone ? `<p>📞 ${data.businessPhone}</p>` : ''}
+          ${data.businessAddress ? `<p>📍 ${data.businessAddress}</p>` : ''}
           
           <p><em>Please arrive 5-10 minutes before your appointment time.</em></p>
         </div>
@@ -232,8 +238,8 @@ Stylist: ${data.stylistName}
 
 BUSINESS INFORMATION:
 ${data.businessName}
-Phone: ${data.businessPhone}
-Address: ${data.businessAddress}
+${data.businessPhone ? `Phone: ${data.businessPhone}` : ''}
+${data.businessAddress ? `Address: ${data.businessAddress}` : ''}
 
 Please arrive 5-10 minutes before your appointment time.
 
@@ -276,8 +282,8 @@ function generateCancelledEmailHTML(data) {
           
           <p><strong>Business Information:</strong></p>
           <p>${data.businessName}</p>
-          <p>📞 ${data.businessPhone}</p>
-          <p>📍 ${data.businessAddress}</p>
+          ${data.businessPhone ? `<p>📞 ${data.businessPhone}</p>` : ''}
+          ${data.businessAddress ? `<p>📍 ${data.businessAddress}</p>` : ''}
         </div>
         <div class="footer">
           <p>Thank you for considering ${data.businessName}!</p>
@@ -306,8 +312,8 @@ We hope to see you again soon!
 
 BUSINESS INFORMATION:
 ${data.businessName}
-Phone: ${data.businessPhone}
-Address: ${data.businessAddress}
+${data.businessPhone ? `Phone: ${data.businessPhone}` : ''}
+${data.businessAddress ? `Address: ${data.businessAddress}` : ''}
 
 Thank you for considering ${data.businessName}!
   `;
@@ -348,8 +354,8 @@ function generateReminderEmailHTML(data) {
           
           <p><strong>Business Information:</strong></p>
           <p>${data.businessName}</p>
-          <p>📞 ${data.businessPhone}</p>
-          <p>📍 ${data.businessAddress}</p>
+          ${data.businessPhone ? `<p>📞 ${data.businessPhone}</p>` : ''}
+          ${data.businessAddress ? `<p>📍 ${data.businessAddress}</p>` : ''}
         </div>
         <div class="footer">
           <p>We look forward to seeing you!</p>
@@ -378,8 +384,8 @@ Please arrive 5-10 minutes before your appointment time.
 
 BUSINESS INFORMATION:
 ${data.businessName}
-Phone: ${data.businessPhone}
-Address: ${data.businessAddress}
+${data.businessPhone ? `Phone: ${data.businessPhone}` : ''}
+${data.businessAddress ? `Address: ${data.businessAddress}` : ''}
 
 We look forward to seeing you!
   `;
@@ -419,8 +425,8 @@ function generateCompletedEmailHTML(data) {
           
           <p><strong>Business Information:</strong></p>
           <p>${data.businessName}</p>
-          <p>📞 ${data.businessPhone}</p>
-          <p>📍 ${data.businessAddress}</p>
+          ${data.businessPhone ? `<p>📞 ${data.businessPhone}</p>` : ''}
+          ${data.businessAddress ? `<p>📍 ${data.businessAddress}</p>` : ''}
         </div>
         <div class="footer">
           <p>We hope to see you again soon!</p>
@@ -448,8 +454,8 @@ We appreciate your business and look forward to serving you again!
 
 BUSINESS INFORMATION:
 ${data.businessName}
-Phone: ${data.businessPhone}
-Address: ${data.businessAddress}
+${data.businessPhone ? `Phone: ${data.businessPhone}` : ''}
+${data.businessAddress ? `Address: ${data.businessAddress}` : ''}
 
 We hope to see you again soon!
   `;
@@ -474,15 +480,14 @@ async function createInAppNotification(appointment, action) {
 
     if (error) {
       console.error('Failed to create in-app notification:', error);
-      // Don't throw the error, just log it
-      return { error: error.message, failed: true };
+      return { success: false, error: error.message };
     }
     
     console.log('In-app notification created successfully');
     return { success: true };
   } catch (error) {
     console.error('Error creating in-app notification:', error);
-    return { error: error.message, failed: true };
+    return { success: false, error: error.message };
   }
 }
 

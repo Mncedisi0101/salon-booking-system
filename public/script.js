@@ -1394,9 +1394,22 @@ async function confirmAppointment(appointmentId) {
 
         if (response.ok) {
             // Send confirmation notification to customer
-            await sendAppointmentNotification(appointmentId, 'confirmed');
+            const notificationResult = await sendAppointmentNotification(appointmentId, 'confirmed');
             
-            showNotification('Appointment confirmed successfully!', 'success');
+            let notificationMessage = 'Appointment confirmed successfully!';
+            
+            // Add details about notification status
+            if (notificationResult?.skipped) {
+                notificationMessage += ' (Notification skipped: ' + notificationResult.reason + ')';
+            } else if (notificationResult?.emailSent === false) {
+                notificationMessage += ' (Email notification failed)';
+            } else if (notificationResult?.success === false) {
+                notificationMessage += ' (Notification service unavailable)';
+            } else {
+                notificationMessage += ' (Notification sent successfully)';
+            }
+            
+            showNotification(notificationMessage, 'success');
             await loadAppointments(); // Reload the appointments list
             
         } else {
@@ -1431,9 +1444,20 @@ async function cancelAppointment(appointmentId) {
 
         if (response.ok) {
             // Send cancellation notification to customer
-            await sendAppointmentNotification(appointmentId, 'cancelled');
+            const notificationResult = await sendAppointmentNotification(appointmentId, 'cancelled');
             
-            showNotification('Appointment cancelled successfully!', 'success');
+            let notificationMessage = 'Appointment cancelled successfully!';
+            
+            // Add details about notification status
+            if (notificationResult?.skipped) {
+                notificationMessage += ' (Notification skipped: ' + notificationResult.reason + ')';
+            } else if (notificationResult?.emailSent === false) {
+                notificationMessage += ' (Email notification failed)';
+            } else if (notificationResult?.success === false) {
+                notificationMessage += ' (Notification service unavailable)';
+            }
+            
+            showNotification(notificationMessage, 'success');
             await loadAppointments(); // Reload the appointments list
             
         } else {
@@ -1448,6 +1472,8 @@ async function cancelAppointment(appointmentId) {
 // Send appointment notification (email/SMS)
 async function sendAppointmentNotification(appointmentId, action) {
     try {
+        console.log(`Sending ${action} notification for appointment:`, appointmentId);
+        
         const response = await fetch('/api/notifications', {
             method: 'POST',
             headers: {
@@ -1460,13 +1486,45 @@ async function sendAppointmentNotification(appointmentId, action) {
             })
         });
 
-        if (response.ok) {
-            console.log(`Notification sent for ${action} appointment`);
-        } else {
-            console.warn('Failed to send notification, but appointment status was updated');
+        if (!response.ok) {
+            const errorResult = await response.json();
+            console.warn(`Notification API returned ${response.status}:`, errorResult);
+            
+            // Check if it's a configuration issue vs a real error
+            if (response.status === 500) {
+                const errorMessage = errorResult?.error || 'Notification service temporarily unavailable';
+                if (errorMessage.includes('email service not configured') || 
+                    errorMessage.includes('No customer email')) {
+                    console.log('Notification skipped due to configuration:', errorMessage);
+                    return { skipped: true, reason: errorMessage };
+                }
+            }
+            
+            throw new Error(`Notification failed: ${response.status} - ${errorResult?.error || 'Unknown error'}`);
         }
+
+        const result = await response.json();
+        console.log('Notification response:', result);
+        
+        if (result.emailSent === false && result.emailError) {
+            console.warn('Email notification failed:', result.emailError);
+            return { 
+                success: true, 
+                emailSent: false, 
+                emailError: result.emailError,
+                notificationCreated: result.notificationCreated 
+            };
+        }
+        
+        return result;
+
     } catch (error) {
-        console.warn('Notification service unavailable, but appointment status was updated');
+        console.warn('Notification service unavailable, but appointment status was updated:', error.message);
+        return { 
+            success: false, 
+            error: error.message,
+            appointmentUpdated: true 
+        };
     }
 }
 // Export appointments function
