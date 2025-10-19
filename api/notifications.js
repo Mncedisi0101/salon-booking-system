@@ -73,7 +73,7 @@ async function sendAppointmentEmail(appointment, action) {
   
   try {
     const { data, error } = await resend.emails.send({
-      from: `${businessName} <${businessEmail}>`, // Sender is business email
+      from: `${businessName} <onboarding@resend.dev>`, // Use test domain
       to: customerEmail,
       reply_to: businessEmail, // Replies go to business's email
       subject: emailTemplate.subject,
