@@ -256,9 +256,10 @@ module.exports = async (req, res) => {
       if (error) {
         return res.status(400).json({ error: error.message });
       }
-      // Send email + in-app notification
+
+      // Send email + in-app notification (but don't fail the whole request if notifications fail)
       try {
-        await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/notifications`, {
+        const notificationResponse = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/notifications`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -269,9 +270,17 @@ module.exports = async (req, res) => {
             businessId: data[0].business_id
           })
         });
+
+        if (!notificationResponse.ok) {
+          const errorText = await notificationResponse.text();
+          console.warn('Notification API returned error:', notificationResponse.status, errorText);
+        } else {
+          console.log('Notification sent successfully');
+        }
       } catch (notificationError) {
-        console.warn('Notification failed, but appointment was updated:', notificationError);
+        console.warn('Notification failed, but appointment was updated:', notificationError.message);
       }
+
       // Transform the response data
       const transformedAppointment = data[0] ? {
         ...data[0],

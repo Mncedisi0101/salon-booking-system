@@ -16,6 +16,12 @@ module.exports = async (req, res) => {
     try {
       const { appointmentId, action, businessId } = req.body;
 
+      console.log('Notification request received:', { appointmentId, action, businessId });
+
+      if (!appointmentId || !action) {
+        return res.status(400).json({ error: 'appointmentId and action are required' });
+      }
+
       // Get appointment details with business email
       const { data: appointment, error: appointmentError } = await supabase
         .from('appointments')
@@ -30,8 +36,11 @@ module.exports = async (req, res) => {
         .single();
 
       if (appointmentError) {
-        return res.status(400).json({ error: 'Appointment not found' });
+        console.error('Appointment not found:', appointmentError);
+        return res.status(400).json({ error: 'Appointment not found: ' + appointmentError.message });
       }
+
+      console.log('Appointment found:', appointment.id);
 
       // Send email using business's email as sender
       const emailResult = await sendAppointmentEmail(appointment, action);
@@ -47,8 +56,8 @@ module.exports = async (req, res) => {
       });
 
     } catch (error) {
-      console.error('Notification error:', error);
-      return res.status(500).json({ error: 'Failed to send notification' });
+      console.error('Notification error details:', error);
+      return res.status(500).json({ error: 'Failed to send notification: ' + error.message });
     }
   }
 
@@ -61,35 +70,40 @@ async function sendAppointmentEmail(appointment, action) {
   const businessEmail = appointment.businesses?.email;
   const businessName = appointment.businesses?.name || 'Salon';
   
+  console.log('Sending email to:', customerEmail, 'from business:', businessName);
+
   if (!customerEmail) {
     throw new Error('Customer email not found');
   }
 
   if (!businessEmail) {
-    throw new Error('Business email not found');
+    console.warn('Business email not found, using fallback');
   }
 
   const emailTemplate = generateEmailTemplate(appointment, action);
   
   try {
+    console.log('Attempting to send email via Resend...');
+    
     const { data, error } = await resend.emails.send({
       from: `${businessName} <onboarding@resend.dev>`, // Use test domain
       to: customerEmail,
-      reply_to: businessEmail, // Replies go to business's email
+      reply_to: businessEmail || 'noreply@example.com', // Fallback if no business email
       subject: emailTemplate.subject,
       html: emailTemplate.html,
       text: emailTemplate.text,
     });
 
     if (error) {
-      throw new Error(error.message);
+      console.error('Resend API error:', error);
+      throw new Error(`Resend API error: ${JSON.stringify(error)}`);
     }
 
     console.log('Email sent successfully:', data);
     return data;
 
   } catch (error) {
-    console.error('Resend error:', error);
+    console.error('Email sending error:', error);
     throw error;
   }
 }
@@ -225,22 +239,31 @@ Thank you for choosing ${data.businessName}!
 // Add similar functions for cancelled, reminder, completed emails...
 
 async function createInAppNotification(appointment, action) {
-  // Create notification in database for the customer to see when they login
-  const { error } = await supabase
-    .from('notifications')
-    .insert([{
-      user_id: appointment.user_id,
-      user_type: 'customer',
-      title: getNotificationTitle(action),
-      message: getNotificationMessage(appointment, action),
-      type: action,
-      related_id: appointment.id,
-      related_type: 'appointment',
-      is_read: false
-    }]);
+  try {
+    console.log('Creating in-app notification for user:', appointment.user_id);
+    
+    const { error } = await supabase
+      .from('notifications')
+      .insert([{
+        user_id: appointment.user_id,
+        user_type: 'customer',
+        title: getNotificationTitle(action),
+        message: getNotificationMessage(appointment, action),
+        type: action,
+        related_id: appointment.id,
+        related_type: 'appointment',
+        is_read: false
+      }]);
 
-  if (error) {
-    console.error('Failed to create in-app notification:', error);
+    if (error) {
+      console.error('Failed to create in-app notification:', error);
+      throw error;
+    }
+    
+    console.log('In-app notification created successfully');
+  } catch (error) {
+    console.error('Error creating in-app notification:', error);
+    throw error;
   }
 }
 
