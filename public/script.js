@@ -1988,18 +1988,76 @@ function addNotification(message, type = 'info') {
     // Show toast notification
     showNotification(message, type);
 }
+// Notification system for customers
+async function loadCustomerNotifications() {
+  if (!currentUserId || userType !== 'customer') return;
 
-function markNotificationAsRead(notificationId) {
-    const notifications = JSON.parse(localStorage.getItem('businessNotifications') || '[]');
-    const notification = notifications.find(n => n.id === notificationId);
-    
-    if (notification) {
-        notification.read = true;
-        localStorage.setItem('businessNotifications', JSON.stringify(notifications));
-        loadNotifications();
+  try {
+    const response = await fetch(`/api/notifications-api?userId=${currentUserId}&userType=customer`);
+    const result = await response.json();
+
+    if (response.ok && result.notifications) {
+      displayNotifications(result.notifications);
     }
+  } catch (error) {
+    console.error('Error loading notifications:', error);
+  }
 }
 
+function displayNotifications(notifications) {
+  const notificationBadge = document.getElementById('notificationBadge');
+  const notificationList = document.getElementById('notificationList');
+  
+  if (!notificationBadge || !notificationList) return;
+
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+  
+  // Update badge
+  notificationBadge.textContent = unreadCount;
+  notificationBadge.style.display = unreadCount > 0 ? 'flex' : 'none';
+
+  // Update notification list
+  if (notifications.length === 0) {
+    notificationList.innerHTML = '<div class="no-notifications">No notifications</div>';
+    return;
+  }
+
+  notificationList.innerHTML = notifications.map(notification => `
+    <div class="notification-item ${notification.is_read ? 'read' : 'unread'}" 
+         onclick="markNotificationAsRead('${notification.id}')">
+      <div class="notification-content">
+        <h4>${notification.title}</h4>
+        <p>${notification.message}</p>
+        <small>${new Date(notification.created_at).toLocaleDateString()}</small>
+      </div>
+      ${!notification.is_read ? '<div class="unread-dot"></div>' : ''}
+    </div>
+  `).join('');
+}
+
+async function markNotificationAsRead(notificationId) {
+  try {
+    const response = await fetch('/api/notifications-api', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        notificationId: notificationId,
+        isRead: true
+      })
+    });
+
+    if (response.ok) {
+      loadCustomerNotifications(); // Reload notifications
+    }
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+  }
+}
+// Poll for new notifications every 30 seconds
+setInterval(loadCustomerNotifications, 30000);
+// format notification time
 function formatNotificationTime(timestamp) {
     const now = new Date();
     const time = new Date(timestamp);

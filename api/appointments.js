@@ -256,7 +256,22 @@ module.exports = async (req, res) => {
       if (error) {
         return res.status(400).json({ error: error.message });
       }
-
+      // Send email + in-app notification
+      try {
+        await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/notifications`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            appointmentId: id,
+            action: status,
+            businessId: data[0].business_id
+          })
+        });
+      } catch (notificationError) {
+        console.warn('Notification failed, but appointment was updated:', notificationError);
+      }
       // Transform the response data
       const transformedAppointment = data[0] ? {
         ...data[0],

@@ -1098,6 +1098,46 @@
     min-width: 100px;
     text-align: center;
 }
+.notification-item {
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.notification-item:hover {
+  background-color: #f5f5f5;
+}
+
+.notification-item.unread {
+  background-color: #f0f7ff;
+  border-left: 3px solid #8a4fff;
+}
+
+.notification-item.read {
+  opacity: 0.7;
+}
+
+.unread-dot {
+  width: 8px;
+  height: 8px;
+  background: #8a4fff;
+  border-radius: 50%;
+}
+
+.notification-content h4 {
+  margin: 0 0 5px 0;
+  color: #333;
+}
+
+.notification-content p {
+  margin: 0 0 5px 0;
+  color: #666;
+}
+
+.notification-content small {
+  color: #999;
+}
         /* Responsive Styles */
         @media (max-width: 1100px) {
             .sidebar {
