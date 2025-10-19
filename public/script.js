@@ -1393,24 +1393,26 @@ async function confirmAppointment(appointmentId) {
         const result = await response.json();
 
         if (response.ok) {
-            // Send confirmation notification to customer
-            const notificationResult = await sendAppointmentNotification(appointmentId, 'confirmed');
+            // Send notification (but don't wait for it or let it fail the main action)
+            setTimeout(async () => {
+                try {
+                    const notificationResult = await sendAppointmentNotification(appointmentId, 'confirmed');
+                    console.log('Notification result:', notificationResult);
+                    
+                    if (notificationResult.success) {
+                        if (notificationResult.email && !notificationResult.email.sent) {
+                            console.log('Email notification skipped:', notificationResult.email.reason);
+                        }
+                    } else {
+                        console.warn('Notification failed:', notificationResult.error);
+                    }
+                } catch (notificationError) {
+                    console.warn('Background notification error:', notificationError);
+                }
+            }, 100);
             
-            let notificationMessage = 'Appointment confirmed successfully!';
-            
-            // Add details about notification status
-            if (notificationResult?.skipped) {
-                notificationMessage += ' (Notification skipped: ' + notificationResult.reason + ')';
-            } else if (notificationResult?.emailSent === false) {
-                notificationMessage += ' (Email notification failed)';
-            } else if (notificationResult?.success === false) {
-                notificationMessage += ' (Notification service unavailable)';
-            } else {
-                notificationMessage += ' (Notification sent successfully)';
-            }
-            
-            showNotification(notificationMessage, 'success');
-            await loadAppointments(); // Reload the appointments list
+            showNotification('Appointment confirmed successfully!', 'success');
+            await loadAppointments();
             
         } else {
             throw new Error(result.error || 'Failed to confirm appointment');
@@ -1443,22 +1445,18 @@ async function cancelAppointment(appointmentId) {
         const result = await response.json();
 
         if (response.ok) {
-            // Send cancellation notification to customer
-            const notificationResult = await sendAppointmentNotification(appointmentId, 'cancelled');
+            // Send notification in background
+            setTimeout(async () => {
+                try {
+                    const notificationResult = await sendAppointmentNotification(appointmentId, 'cancelled');
+                    console.log('Notification result:', notificationResult);
+                } catch (notificationError) {
+                    console.warn('Background notification error:', notificationError);
+                }
+            }, 100);
             
-            let notificationMessage = 'Appointment cancelled successfully!';
-            
-            // Add details about notification status
-            if (notificationResult?.skipped) {
-                notificationMessage += ' (Notification skipped: ' + notificationResult.reason + ')';
-            } else if (notificationResult?.emailSent === false) {
-                notificationMessage += ' (Email notification failed)';
-            } else if (notificationResult?.success === false) {
-                notificationMessage += ' (Notification service unavailable)';
-            }
-            
-            showNotification(notificationMessage, 'success');
-            await loadAppointments(); // Reload the appointments list
+            showNotification('Appointment cancelled successfully!', 'success');
+            await loadAppointments();
             
         } else {
             throw new Error(result.error || 'Failed to cancel appointment');
@@ -1486,40 +1484,37 @@ async function sendAppointmentNotification(appointmentId, action) {
             })
         });
 
-        if (!response.ok) {
-            const errorResult = await response.json();
-            console.warn(`Notification API returned ${response.status}:`, errorResult);
-            
-            // Check if it's a configuration issue vs a real error
-            if (response.status === 500) {
-                const errorMessage = errorResult?.error || 'Notification service temporarily unavailable';
-                if (errorMessage.includes('email service not configured') || 
-                    errorMessage.includes('No customer email')) {
-                    console.log('Notification skipped due to configuration:', errorMessage);
-                    return { skipped: true, reason: errorMessage };
-                }
-            }
-            
-            throw new Error(`Notification failed: ${response.status} - ${errorResult?.error || 'Unknown error'}`);
+        // Handle non-JSON responses
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.warn('Non-JSON response from notifications API:', text.substring(0, 200));
+            return { 
+                success: false, 
+                error: `Server returned non-JSON: ${response.status}`,
+                appointmentUpdated: true 
+            };
         }
 
         const result = await response.json();
-        console.log('Notification response:', result);
         
-        if (result.emailSent === false && result.emailError) {
-            console.warn('Email notification failed:', result.emailError);
+        if (!response.ok) {
+            console.warn(`Notification API error ${response.status}:`, result);
             return { 
-                success: true, 
-                emailSent: false, 
-                emailError: result.emailError,
-                notificationCreated: result.notificationCreated 
+                success: false, 
+                error: result.error || `HTTP ${response.status}`,
+                appointmentUpdated: true 
             };
         }
-        
-        return result;
+
+        console.log('Notification processed successfully:', result);
+        return { 
+            success: true, 
+            ...result 
+        };
 
     } catch (error) {
-        console.warn('Notification service unavailable, but appointment status was updated:', error.message);
+        console.warn('Notification request failed:', error.message);
         return { 
             success: false, 
             error: error.message,
