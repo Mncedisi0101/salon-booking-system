@@ -1,18 +1,56 @@
 const supabase = require('../supabase');
+const nodemailer = require('nodemailer');
 
-// Check if Resend is available
-let Resend;
-let resend;
+// Configure Nodemailer
+let emailTransporter;
+let emailConfigured = false;
+
+// Check if Twilio is available
+let twilioClient;
+let twilioConfigured = false;
+
 try {
-  Resend = require('resend');
-  if (process.env.RESEND_API_KEY) {
-    resend = new Resend(process.env.RESEND_API_KEY);
-    console.log('Resend email service initialized');
+  // Create Nodemailer transporter
+  if (process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    emailTransporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      secure: process.env.SMTP_PORT == 465, // true for 465, false for other ports
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+    
+    // Verify connection configuration
+    emailTransporter.verify(function(error, success) {
+      if (error) {
+        console.error('Nodemailer configuration error:', error);
+      } else {
+        emailConfigured = true;
+        console.log('Nodemailer email service initialized and ready');
+      }
+    });
   } else {
-    console.warn('RESEND_API_KEY not configured - email notifications disabled');
+    console.warn('SMTP configuration not complete - email notifications disabled');
+    console.log('Required: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS');
   }
 } catch (error) {
-  console.warn('Resend package not available - email notifications disabled');
+  console.warn('Nodemailer package not available - email notifications disabled');
+}
+
+try {
+  const twilio = require('twilio');
+  if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
+    twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    twilioConfigured = true;
+    console.log('Twilio SMS service initialized');
+  } else {
+    console.warn('Twilio credentials not fully configured - SMS notifications disabled');
+    console.log('Required: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER');
+  }
+} catch (error) {
+  console.warn('Twilio package not available - SMS notifications disabled');
 }
 
 module.exports = async (req, res) => {
@@ -91,6 +129,10 @@ module.exports = async (req, res) => {
     const emailResult = await sendAppointmentEmail(appointment, action);
     console.log('Email result:', emailResult);
     
+    // Process SMS notification (only for confirmed appointments)
+    const smsResult = action === 'confirmed' ? await sendAppointmentSMS(appointment, action) : { sent: false, reason: 'SMS only sent for confirmed appointments' };
+    console.log('SMS result:', smsResult);
+    
     // Process in-app notification
     const notificationResult = await createInAppNotification(appointment, action);
     console.log('Notification result:', notificationResult);
@@ -100,6 +142,7 @@ module.exports = async (req, res) => {
       success: true, 
       message: 'Notification processed successfully',
       email: emailResult,
+      sms: smsResult,
       notification: notificationResult
     });
 
@@ -112,47 +155,171 @@ module.exports = async (req, res) => {
   }
 };
 
+async function sendAppointmentSMS(appointment, action) {
+  try {
+    const customerPhone = appointment.customers?.phone;
+    const customerName = appointment.customers?.name || 'Valued Customer';
+    const businessName = appointment.businesses?.name || 'Our Salon';
+    
+    console.log('Checking SMS requirements:', { 
+      customerPhone, 
+      hasTwilio: twilioConfigured,
+      twilioSid: process.env.TWILIO_ACCOUNT_SID ? 'Set' : 'Not set',
+      twilioAuth: process.env.TWILIO_AUTH_TOKEN ? 'Set' : 'Not set',
+      twilioNumber: process.env.TWILIO_PHONE_NUMBER ? 'Set' : 'Not set'
+    });
+
+    // Check if we can send SMS
+    if (!customerPhone) {
+      return { sent: false, reason: 'No customer phone number available' };
+    }
+
+    if (!twilioConfigured || !twilioClient) {
+      return { sent: false, reason: 'SMS service not configured. Check Twilio credentials.' };
+    }
+
+    // Validate phone number format (basic check)
+    const cleanPhone = customerPhone.replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      return { sent: false, reason: 'Invalid phone number format' };
+    }
+
+    // Generate SMS content
+    const smsTemplate = generateSMSTemplate(appointment, action);
+    
+    console.log('Sending SMS via Twilio to:', customerPhone);
+    
+    // Prepare Twilio message
+    const message = await twilioClient.messages.create({
+      body: smsTemplate,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: customerPhone
+    });
+    
+    console.log('SMS sent successfully via Twilio. SID:', message.sid);
+    return { 
+      sent: true, 
+      sid: message.sid,
+      status: message.status,
+      message: 'SMS sent via Twilio'
+    };
+
+  } catch (error) {
+    console.error('Error in sendAppointmentSMS with Twilio:', error);
+    
+    let errorMessage = error.message;
+    if (error.code) {
+      errorMessage = `Twilio error ${error.code}: ${error.message}`;
+    }
+    
+    return { 
+      sent: false, 
+      reason: 'Twilio error: ' + errorMessage 
+    };
+  }
+}
+
+function generateSMSTemplate(appointment, action) {
+  const customerName = appointment.customers?.name || 'Valued Customer';
+  const businessName = appointment.businesses?.name || 'Our Salon';
+  const serviceName = appointment.services?.name || appointment.service;
+  const stylistName = appointment.stylists?.name || 'Not assigned';
+  
+  // Format date safely
+  let formattedDate = 'Unknown date';
+  let formattedTime = 'Unknown time';
+  
+  try {
+    const appointmentDate = new Date(appointment.appointment_date);
+    formattedDate = appointmentDate.toLocaleDateString('en-US', { 
+      weekday: 'short', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+    formattedTime = appointmentDate.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  } catch (dateError) {
+    console.error('Error formatting date:', dateError);
+  }
+
+  const businessPhone = appointment.businesses?.phone;
+
+  if (action === 'confirmed') {
+    return `Hi ${customerName}! Your ${serviceName} appointment at ${businessName} is confirmed for ${formattedDate} at ${formattedTime} with ${stylistName}. Please arrive 5-10 mins early. Reply STOP to unsub.${businessPhone ? ` Questions? Call ${businessPhone}` : ''}`;
+  }
+  
+  if (action === 'cancelled') {
+    return `Hi ${customerName}! Your ${serviceName} appointment at ${businessName} for ${formattedDate} has been cancelled. We hope to see you soon!${businessPhone ? ` Call ${businessPhone} to reschedule.` : ''}`;
+  }
+
+  return `Hi ${customerName}! Your appointment at ${businessName} has been ${action}.${businessPhone ? ` Call ${businessPhone} for details.` : ''}`;
+}
+
 async function sendAppointmentEmail(appointment, action) {
   try {
     const customerEmail = appointment.customers?.email;
     const customerName = appointment.customers?.name || 'Valued Customer';
+    const businessName = appointment.businesses?.name || 'Our Salon';
+    const businessEmail = appointment.businesses?.email || process.env.SMTP_USER || 'noreply@salonbookingsystem.com';
     
-    console.log('Checking email requirements:', { customerEmail, hasResend: !!resend });
+    console.log('Checking email requirements:', { 
+      customerEmail, 
+      hasNodemailer: emailConfigured,
+      smtpHost: process.env.SMTP_HOST ? 'Set' : 'Not set',
+      smtpUser: process.env.SMTP_USER ? 'Set' : 'Not set'
+    });
 
     // Check if we can send email
     if (!customerEmail) {
       return { sent: false, reason: 'No customer email available' };
     }
 
-    if (!resend) {
-      return { sent: false, reason: 'Email service not configured' };
+    if (!emailConfigured || !emailTransporter) {
+      return { sent: false, reason: 'Email service not configured. Check SMTP configuration.' };
     }
 
     // Generate email content
     const emailTemplate = generateEmailTemplate(appointment, action);
     
-    console.log('Sending email to:', customerEmail);
+    console.log('Sending email via Nodemailer to:', customerEmail);
     
-    // Send email
-    const { data, error } = await resend.emails.send({
-      from: 'Salon Booking <onboarding@resend.dev>',
+    // Prepare email message
+    const mailOptions = {
+      from: {
+        name: businessName,
+        address: businessEmail
+      },
       to: customerEmail,
       subject: emailTemplate.subject,
       html: emailTemplate.html,
       text: emailTemplate.text,
-    });
+    };
 
-    if (error) {
-      console.error('Resend API error:', error);
-      return { sent: false, reason: 'Email service error: ' + error.message };
-    }
-
-    console.log('Email sent successfully');
-    return { sent: true, data: data };
+    // Send email using Nodemailer
+    const info = await emailTransporter.sendMail(mailOptions);
+    
+    console.log('Email sent successfully via Nodemailer. Message ID:', info.messageId);
+    return { 
+      sent: true, 
+      messageId: info.messageId,
+      response: info.response,
+      message: 'Email sent via Nodemailer'
+    };
 
   } catch (error) {
-    console.error('Error in sendAppointmentEmail:', error);
-    return { sent: false, reason: 'Unexpected error: ' + error.message };
+    console.error('Error in sendAppointmentEmail with Nodemailer:', error);
+    
+    let errorMessage = error.message;
+    if (error.responseCode) {
+      errorMessage = `SMTP error ${error.responseCode}: ${error.message}`;
+    }
+    
+    return { 
+      sent: false, 
+      reason: 'Nodemailer error: ' + errorMessage 
+    };
   }
 }
 
@@ -204,6 +371,11 @@ function generateEmailTemplate(appointment, action) {
       subject: `Appointment Cancelled - ${businessName}`,
       html: generateCancelledEmailHTML(baseData),
       text: generateCancelledEmailText(baseData)
+    },
+    completed: {
+      subject: `Thank You for Your Visit - ${businessName}`,
+      html: generateCompletedEmailHTML(baseData),
+      text: generateCompletedEmailText(baseData)
     }
   };
 
@@ -212,34 +384,59 @@ function generateEmailTemplate(appointment, action) {
 
 function generateConfirmedEmailHTML(data) {
   return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <div style="background: #8a4fff; color: white; padding: 20px; text-align: center;">
-        <h1>Appointment Confirmed!</h1>
-      </div>
-      <div style="background: #f9f9f9; padding: 20px;">
-        <p>Hello <strong>${data.customerName}</strong>,</p>
-        <p>Your appointment has been confirmed! We look forward to seeing you.</p>
-        
-        <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0;">
-          <h3>Appointment Details:</h3>
-          <p><strong>Service:</strong> ${data.serviceName}</p>
-          <p><strong>Date:</strong> ${data.formattedDate}</p>
-          <p><strong>Time:</strong> ${data.formattedTime}</p>
-          <p><strong>Stylist:</strong> ${data.stylistName}</p>
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #8a4fff; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+        .appointment-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #8a4fff; }
+        .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; padding-top: 20px; border-top: 1px solid #eee; }
+        .button { display: inline-block; background: #8a4fff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Appointment Confirmed! ✅</h1>
         </div>
-        
-        <p><em>Please arrive 5-10 minutes before your appointment time.</em></p>
+        <div class="content">
+          <p>Hello <strong>${data.customerName}</strong>,</p>
+          <p>Your appointment has been confirmed! We look forward to seeing you.</p>
+          
+          <div class="appointment-details">
+            <h3 style="margin-top: 0; color: #8a4fff;">Appointment Details</h3>
+            <p><strong>Service:</strong> ${data.serviceName}</p>
+            <p><strong>Date:</strong> ${data.formattedDate}</p>
+            <p><strong>Time:</strong> ${data.formattedTime}</p>
+            <p><strong>Stylist:</strong> ${data.stylistName}</p>
+            ${data.businessPhone ? `<p><strong>Contact:</strong> ${data.businessPhone}</p>` : ''}
+          </div>
+          
+          <p><strong>Location:</strong><br>${data.businessName}<br>${data.businessAddress || 'Please contact us for address details'}</p>
+          
+          <div style="background: #e8f4ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 0;"><strong>📅 Reminder:</strong> Please arrive 5-10 minutes before your appointment time.</p>
+          </div>
+          
+          <p>If you need to reschedule or have any questions, please contact us.</p>
+        </div>
+        <div class="footer">
+          <p>Thank you for choosing ${data.businessName}!</p>
+          <p><small>This is an automated message, please do not reply to this email.</small></p>
+        </div>
       </div>
-      <div style="text-align: center; margin-top: 20px; color: #666; font-size: 14px;">
-        <p>Thank you for choosing ${data.businessName}!</p>
-      </div>
-    </div>
+    </body>
+    </html>
   `;
 }
 
 function generateConfirmedEmailText(data) {
   return `
-Appointment Confirmed!
+APPOINTMENT CONFIRMED
 
 Hello ${data.customerName},
 
@@ -250,55 +447,163 @@ Service: ${data.serviceName}
 Date: ${data.formattedDate}
 Time: ${data.formattedTime}
 Stylist: ${data.stylistName}
+${data.businessPhone ? `Contact: ${data.businessPhone}` : ''}
 
-Please arrive 5-10 minutes before your appointment time.
+LOCATION:
+${data.businessName}
+${data.businessAddress || 'Please contact us for address details'}
+
+REMINDER: Please arrive 5-10 minutes before your appointment time.
+
+If you need to reschedule or have any questions, please contact us.
 
 Thank you for choosing ${data.businessName}!
+
+This is an automated message, please do not reply to this email.
   `;
 }
 
 function generateCancelledEmailHTML(data) {
   return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <div style="background: #ff4757; color: white; padding: 20px; text-align: center;">
-        <h1>Appointment Cancelled</h1>
-      </div>
-      <div style="background: #f9f9f9; padding: 20px;">
-        <p>Hello <strong>${data.customerName}</strong>,</p>
-        <p>Your appointment has been cancelled.</p>
-        
-        <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0;">
-          <h3>Cancelled Appointment:</h3>
-          <p><strong>Service:</strong> ${data.serviceName}</p>
-          <p><strong>Date:</strong> ${data.formattedDate}</p>
-          <p><strong>Time:</strong> ${data.formattedTime}</p>
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #ff4757; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+        .appointment-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ff4757; }
+        .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; padding-top: 20px; border-top: 1px solid #eee; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Appointment Cancelled ❌</h1>
         </div>
-        
-        <p>We hope to see you again soon!</p>
+        <div class="content">
+          <p>Hello <strong>${data.customerName}</strong>,</p>
+          <p>Your appointment has been cancelled as requested.</p>
+          
+          <div class="appointment-details">
+            <h3 style="margin-top: 0; color: #ff4757;">Cancelled Appointment</h3>
+            <p><strong>Service:</strong> ${data.serviceName}</p>
+            <p><strong>Date:</strong> ${data.formattedDate}</p>
+            <p><strong>Time:</strong> ${data.formattedTime}</p>
+            <p><strong>Stylist:</strong> ${data.stylistName}</p>
+          </div>
+          
+          <p>We hope to see you again soon! You can book a new appointment anytime.</p>
+          
+          <p><strong>Business Information:</strong><br>
+          ${data.businessName}<br>
+          ${data.businessPhone ? `Phone: ${data.businessPhone}<br>` : ''}
+          ${data.businessAddress || ''}</p>
+        </div>
+        <div class="footer">
+          <p>Thank you for considering ${data.businessName}!</p>
+          <p><small>This is an automated message, please do not reply to this email.</small></p>
+        </div>
       </div>
-      <div style="text-align: center; margin-top: 20px; color: #666; font-size: 14px;">
-        <p>Thank you for considering ${data.businessName}!</p>
-      </div>
-    </div>
+    </body>
+    </html>
   `;
 }
 
 function generateCancelledEmailText(data) {
   return `
-Appointment Cancelled
+APPOINTMENT CANCELLED
 
 Hello ${data.customerName},
 
-Your appointment has been cancelled.
+Your appointment has been cancelled as requested.
 
 CANCELLED APPOINTMENT:
 Service: ${data.serviceName}
 Date: ${data.formattedDate}
 Time: ${data.formattedTime}
+Stylist: ${data.stylistName}
 
-We hope to see you again soon!
+We hope to see you again soon! You can book a new appointment anytime.
+
+BUSINESS INFORMATION:
+${data.businessName}
+${data.businessPhone ? `Phone: ${data.businessPhone}` : ''}
+${data.businessAddress || ''}
 
 Thank you for considering ${data.businessName}!
+
+This is an automated message, please do not reply to this email.
+  `;
+}
+
+function generateCompletedEmailHTML(data) {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #2ed573; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+        .appointment-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2ed573; }
+        .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; padding-top: 20px; border-top: 1px solid #eee; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Thank You for Your Visit! ✨</h1>
+        </div>
+        <div class="content">
+          <p>Hello <strong>${data.customerName}</strong>,</p>
+          <p>Thank you for visiting us! We hope you enjoyed your experience at ${data.businessName}.</p>
+          
+          <div class="appointment-details">
+            <h3 style="margin-top: 0; color: #2ed573;">Service Details</h3>
+            <p><strong>Service:</strong> ${data.serviceName}</p>
+            <p><strong>Date:</strong> ${data.formattedDate}</p>
+            <p><strong>Stylist:</strong> ${data.stylistName}</p>
+          </div>
+          
+          <p>We appreciate your business and look forward to serving you again!</p>
+          
+          <p>Feel free to book your next appointment with us anytime.</p>
+        </div>
+        <div class="footer">
+          <p>We hope to see you again soon at ${data.businessName}!</p>
+          <p><small>This is an automated message, please do not reply to this email.</small></p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+function generateCompletedEmailText(data) {
+  return `
+THANK YOU FOR YOUR VISIT
+
+Hello ${data.customerName},
+
+Thank you for visiting us! We hope you enjoyed your experience at ${data.businessName}.
+
+SERVICE DETAILS:
+Service: ${data.serviceName}
+Date: ${data.formattedDate}
+Stylist: ${data.stylistName}
+
+We appreciate your business and look forward to serving you again!
+
+Feel free to book your next appointment with us anytime.
+
+We hope to see you again soon at ${data.businessName}!
+
+This is an automated message, please do not reply to this email.
   `;
 }
 
@@ -335,7 +640,8 @@ async function createInAppNotification(appointment, action) {
 function getNotificationTitle(action) {
   const titles = {
     confirmed: 'Appointment Confirmed',
-    cancelled: 'Appointment Cancelled'
+    cancelled: 'Appointment Cancelled',
+    completed: 'Appointment Completed'
   };
   return titles[action] || 'Appointment Update';
 }
@@ -352,7 +658,8 @@ function getNotificationMessage(appointment, action) {
   
   const messages = {
     confirmed: `Your ${serviceName} appointment on ${date} has been confirmed`,
-    cancelled: `Your ${serviceName} appointment on ${date} has been cancelled`
+    cancelled: `Your ${serviceName} appointment on ${date} has been cancelled`,
+    completed: `Thank you for your ${serviceName} appointment! We hope to see you again soon.`
   };
   
   return messages[action] || `Your appointment has been ${action}`;
