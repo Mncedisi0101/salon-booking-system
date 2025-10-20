@@ -2,6 +2,7 @@ const supabase = require('../supabase');
 const bcrypt = require('bcryptjs');
 
 module.exports = async (req, res) => {
+  // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -18,14 +19,14 @@ module.exports = async (req, res) => {
       console.log('Auth request received:', { type, email });
 
       if (type === 'business_register') {
-        // Business Registration
+        // Your existing business registration code...
         if (!email || !password || !name) {
           return res.status(400).json({ error: 'Email, password, and name are required' });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
         
-        // Insert business without services
+        // Insert business
         const { data: businessData, error: businessError } = await supabase
           .from('businesses')
           .insert([{ 
@@ -48,7 +49,7 @@ module.exports = async (req, res) => {
 
         const business = businessData[0];
 
-        // Create services in the services table
+        // Create services
         if (services && services.length > 0) {
           const servicePromises = services.map(service => 
             supabase
